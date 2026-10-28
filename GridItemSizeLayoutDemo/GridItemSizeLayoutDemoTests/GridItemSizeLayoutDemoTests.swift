@@ -78,6 +78,85 @@ final class GridItemSizeLayoutDemoTests: XCTestCase {
         XCTAssertGreaterThan(pinnedAfter, pinnedY + 90)
     }
 
+    func testHorizontalSectionSupplementaryWidthsAndBackgrounds() throws {
+        let controller = SectionLayoutsController(axis: .horizontal)
+        controller.loadViewIfNeeded()
+        controller.view.frame = CGRect(x: 0, y: 0, width: 400, height: 600)
+        controller.view.layoutIfNeeded()
+        let collection = try XCTUnwrap(controller.collectionView)
+        collection.reloadData()
+        collection.layoutIfNeeded()
+        let layout = collection.collectionViewLayout
+        let styles = SectionDemoStyle.styles(for: .horizontal)
+        XCTAssertEqual((layout as? UICollectionViewCompositionalLayout)?.configuration.scrollDirection, .horizontal)
+        for section in styles.indices {
+            let path = IndexPath(item: 0, section: section)
+            collection.scrollToItem(at: path, at: .left, animated: false)
+            collection.layoutIfNeeded()
+            let header = try XCTUnwrap(layout.layoutAttributesForSupplementaryView(
+                ofKind: UICollectionView.elementKindSectionHeader, at: path))
+            let footer = try XCTUnwrap(layout.layoutAttributesForSupplementaryView(
+                ofKind: UICollectionView.elementKindSectionFooter, at: path))
+            let background = try XCTUnwrap(layout.layoutAttributesForDecorationView(
+                ofKind: SectionBackgroundView.elementKind, at: path))
+            XCTAssertEqual(header.size.width, styles[section].headerHeight, accuracy: 0.5)
+            XCTAssertEqual(footer.size.width, styles[section].footerHeight, accuracy: 0.5)
+            XCTAssertGreaterThan(footer.frame.minX, header.frame.minX)
+            XCTAssertLessThan(background.zIndex, header.zIndex)
+            XCTAssertGreaterThan(background.size.width, 0)
+        }
+    }
+
+    func testHorizontalHeaderAndFooterPinIndependently() throws {
+        let controller = SectionLayoutsController(axis: .horizontal)
+        controller.loadViewIfNeeded()
+        controller.view.frame = CGRect(x: 0, y: 0, width: 300, height: 600)
+        controller.view.layoutIfNeeded()
+        let collection = try XCTUnwrap(controller.collectionView)
+        collection.reloadData()
+        collection.layoutIfNeeded()
+        let layout = collection.collectionViewLayout
+        func x(_ kind: String, _ section: Int) throws -> CGFloat {
+            try XCTUnwrap(layout.layoutAttributesForSupplementaryView(
+                ofKind: kind, at: IndexPath(item: 0, section: section))).frame.minX
+        }
+        let headerKind = UICollectionView.elementKindSectionHeader
+        let footerKind = UICollectionView.elementKindSectionFooter
+        let ordinaryX = try x(headerKind, 0)
+        let pinnedX = try x(headerKind, 1)
+        collection.contentOffset.x = pinnedX + 100
+        collection.layoutIfNeeded()
+        XCTAssertEqual(try x(headerKind, 0), ordinaryX, accuracy: 0.5)
+        XCTAssertGreaterThan(try x(headerKind, 1), pinnedX + 90)
+        let start = try x(headerKind, 2)
+        collection.contentOffset.x = start + 20
+        collection.layoutIfNeeded()
+        let footerBefore = try x(footerKind, 2)
+        collection.contentOffset.x += 40
+        collection.layoutIfNeeded()
+        XCTAssertEqual(try x(footerKind, 2) - footerBefore, 40, accuracy: 0.5)
+        XCTAssertEqual(try x(headerKind, 2), start, accuracy: 0.5)
+    }
+
+    func testSectionAxisSwitchRebuildsLayoutAndResetsScroll() throws {
+        let controller = SectionLayoutsController()
+        controller.loadViewIfNeeded()
+        controller.view.frame = CGRect(x: 0, y: 0, width: 400, height: 600)
+        controller.view.layoutIfNeeded()
+        let collection = try XCTUnwrap(controller.collectionView)
+        collection.contentOffset.y = 200
+        for axis in [GridAxis.horizontal, .vertical] {
+            controller.update(axis: axis)
+            collection.layoutIfNeeded()
+            XCTAssertEqual((collection.collectionViewLayout as? UICollectionViewCompositionalLayout)?.configuration.scrollDirection,
+                           axis == .vertical ? .vertical : .horizontal)
+            XCTAssertEqual(collection.contentOffset, .zero)
+            XCTAssertEqual(collection.numberOfItems(inSection: 0), SectionDemoStyle.styles(for: axis)[0].itemCount)
+            let item = try XCTUnwrap(collection.collectionViewLayout.layoutAttributesForItem(at: IndexPath(item: 0, section: 0)))
+            XCTAssertEqual(axis == .vertical ? item.size.width : item.size.height, 72, accuracy: 0.5)
+        }
+    }
+
     func testSizingDemoMeasuresRealTextAndSupportsAllModes() throws {
         for horizontal in [false, true] {
             let controller = MainAxisSizingController(horizontal: horizontal, mode: .estimated, expanded: false)

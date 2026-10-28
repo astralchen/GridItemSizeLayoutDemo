@@ -80,7 +80,7 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showingSections) {
-                SectionLayoutsDemo()
+                SectionLayoutsDemo(initialAxis: configuration.axis)
             }
             .sheet(isPresented: $showingSizing) {
                 MainAxisSizingDemo()

@@ -156,15 +156,29 @@ private final class GridHeader: UICollectionReusableView {
 /// 展示 sectionProvider 按分区索引选择不同布局，与原有 SwiftUI 对比页分别运行。
 struct SectionLayoutsDemo: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var axis: GridAxis
+
+    init(initialAxis: GridAxis = .vertical) {
+        _axis = State(initialValue: initialAxis)
+    }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                Text("各分区使用独立页眉、页脚与背景。上下滚动观察吸顶、吸底和双吸附；底部可横向滑动。")
+                Picker("分区滚动方向", selection: $axis) {
+                    Text("纵向 VGrid").tag(GridAxis.vertical)
+                    Text("横向 HGrid").tag(GridAxis.horizontal)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .accessibilityIdentifier("sections.axis")
+                Text(axis == .vertical
+                     ? "独立页眉、页脚与背景；上下滚动观察吸顶、吸底。末尾可横向滑动。"
+                     : "独立页眉、页脚宽度；左右滚动观察起始／结束边缘吸附。末尾可纵向滑动。")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .padding()
-                SectionLayoutsView()
+                SectionLayoutsView(axis: axis)
             }
             .navigationTitle("独立分区布局")
             .navigationBarTitleDisplayMode(.inline)
@@ -174,13 +188,27 @@ struct SectionLayoutsDemo: View {
 }
 
 private struct SectionLayoutsView: UIViewControllerRepresentable {
-    func makeUIViewController(context: Context) -> SectionLayoutsController { SectionLayoutsController() }
-    func updateUIViewController(_ controller: SectionLayoutsController, context: Context) {}
+    let axis: GridAxis
+    func makeUIViewController(context: Context) -> SectionLayoutsController { SectionLayoutsController(axis: axis) }
+    func updateUIViewController(_ controller: SectionLayoutsController, context: Context) { controller.update(axis: axis) }
 }
 
 final class SectionLayoutsController: UICollectionViewController {
+    private var axis: GridAxis
+    private var styles: [SectionDemoStyle] { SectionDemoStyle.styles(for: axis) }
 
-    init() { super.init(collectionViewLayout: CompositionalGridLayout.makeSections()) }
+    init(axis: GridAxis = .vertical) {
+        self.axis = axis
+        super.init(collectionViewLayout: CompositionalGridLayout.makeSections(axis: axis))
+    }
+
+    func update(axis: GridAxis) {
+        guard self.axis != axis else { return }
+        self.axis = axis
+        collectionView.setCollectionViewLayout(CompositionalGridLayout.makeSections(axis: axis), animated: false)
+        collectionView.reloadData()
+        collectionView.setContentOffset(.zero, animated: false)
+    }
     required init?(coder: NSCoder) { fatalError("Use init()") }
 
     override func viewDidLoad() {
@@ -194,14 +222,14 @@ final class SectionLayoutsController: UICollectionViewController {
         }
     }
 
-    override func numberOfSections(in collectionView: UICollectionView) -> Int { SectionDemoStyle.all.count }
+    override func numberOfSections(in collectionView: UICollectionView) -> Int { styles.count }
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        SectionDemoStyle.all[section].itemCount
+        styles[section].itemCount
     }
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath) as! GridCell
-        let offset = SectionDemoStyle.all.prefix(indexPath.section).reduce(0) { $0 + $1.itemCount }
-        cell.configure(index: offset + indexPath.item, axis: .vertical)
+        let offset = styles.prefix(indexPath.section).reduce(0) { $0 + $1.itemCount }
+        cell.configure(index: offset + indexPath.item, axis: axis)
         cell.accessibilityIdentifier = "sections.cell.\(indexPath.section).\(indexPath.item)"
         return cell
     }
@@ -210,7 +238,7 @@ final class SectionLayoutsController: UICollectionViewController {
         let view = collectionView.dequeueReusableSupplementaryView(
             ofKind: kind, withReuseIdentifier: "boundary", for: indexPath
         ) as! SectionBoundaryView
-        view.configure(section: indexPath.section, isHeader: kind == UICollectionView.elementKindSectionHeader)
+        view.configure(section: indexPath.section, axis: axis, isHeader: kind == UICollectionView.elementKindSectionHeader)
         return view
     }
 }
@@ -237,12 +265,24 @@ private final class SectionBoundaryView: UICollectionReusableView {
 
     required init?(coder: NSCoder) { fatalError("Use init(frame:)") }
 
-    func configure(section: Int, isHeader: Bool) {
-        let style = SectionDemoStyle.all[section]
+    func configure(section: Int, axis: GridAxis, isHeader: Bool) {
+        let style = SectionDemoStyle.styles(for: axis)[section]
         let pinned = style.pinnedViews.contains(isHeader ? .sectionHeaders : .sectionFooters)
-        let title = isHeader
-            ? "\(section + 1) · \(style.title) · \(pinned ? "页眉吸顶" : "普通页眉")"
-            : "\(style.itemCount) 项 · \(Int(style.footerHeight)) pt 页脚 · \(pinned ? "吸底" : "不吸附")"
+        let title: String
+        if axis == .horizontal {
+            let shortTitle = ["fixed\n3 行 × 72", "flexible\n2 行均分", "adaptive\n最小 85", "混排", "原生\n纵向轮播"][section]
+            title = isHeader
+                ? "\(section + 1)\n\(shortTitle)\n\n页眉\n\(Int(style.headerHeight)) pt\n\(pinned ? "起始吸附" : "不吸附")"
+                : "\(style.itemCount) 项\n\n页脚\n\(Int(style.footerHeight)) pt\n\(pinned ? "结束吸附" : "不吸附")"
+            label.numberOfLines = 0
+            label.textAlignment = .center
+        } else {
+            title = isHeader
+                ? "\(section + 1) · \(style.title) · \(pinned ? "页眉吸顶" : "普通页眉")"
+                : "\(style.itemCount) 项 · \(Int(style.footerHeight)) pt 页脚 · \(pinned ? "吸底" : "不吸附")"
+            label.numberOfLines = 2
+            label.textAlignment = .natural
+        }
         label.text = title
         label.textColor = style.color
         accessibilityLabel = title

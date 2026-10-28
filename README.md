@@ -2,7 +2,7 @@
 
 使用同一组参数，对比 SwiftUI `LazyVGrid` / `LazyHGrid` 和 UIKit compositional layout。
 
-布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。示例使用 [UIKitGridLayouts 0.3.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.3.0) 的布局 API，submodule 固定到后续仅新增 `AGENTS.md` 协作规范的提交 [`59d9a14`](https://github.com/astralchen/UIKitGridLayouts/commit/59d9a14)，库源码与 0.3.0 一致。包含固定、内容自适应、同组统一和宽高比四种主轴尺寸策略；0.2.x 的调用方需要按下文迁移。
+布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。示例使用 [UIKitGridLayouts 0.3.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.3.0) 的布局 API，submodule 固定到后续文档与截图更新提交 [`29c6752`](https://github.com/astralchen/UIKitGridLayouts/commit/29c6752)，包含横向多分区用法及运行截图；库源码与 0.3.0 一致。原有 uniform 主轴尺寸演示、入口与纵横向截图完整保留。包含固定、内容自适应、同组统一和宽高比四种主轴尺寸策略；0.2.x 的调用方需要按下文迁移。
 
 ## 运行截图
 
@@ -30,7 +30,7 @@
 
 ## 多分区布局
 
-导航栏“多分区”入口展示同一集合视图中的五种独立布局：fixed、flexible、adaptive、混排和 UIKit 原生横向轮播。每个分区有独立的尺寸、间距与对齐。
+导航栏“多分区”入口可切换纵向和横向，展示 fixed、flexible、adaptive、混排和 UIKit 原生正交轮播。每个分区有独立的尺寸、间距、对齐、辅助视图与背景。
 
 示例通过 `UIKitLazyVGridLayout.makeSection(..., environment:)` 生成分区，并在外层 `sectionProvider` 按索引选择；横向宿主对应 `UIKitLazyHGridLayout.makeSection`。此 API 从 UIKitGridLayouts 0.2.0 起提供。Debug 参数 `--grid-sections` 可直接打开该页面。
 
@@ -43,7 +43,7 @@
 
 ### 每个分区独立配置辅助视图与背景
 
-“多分区”页同时演示以下配置；页眉和页脚文本直接标明吸附状态，背景使用不同颜色区分分区。分区包含足够多的单元格，可上下滚动观察辅助视图在所属分区范围内的吸附和离开。
+“多分区”页在纵向模式演示以下配置；页眉和页脚文本直接标明吸附状态，背景使用不同颜色区分分区。分区包含足够多的单元格，可上下滚动观察辅助视图在所属分区范围内的吸附和离开。
 
 | 分区 | Header 高度 | Footer 高度 | 吸附选项 | 背景 |
 | --- | ---: | ---: | --- | --- |
@@ -113,6 +113,62 @@ return view
 - `pinToVisibleBounds` 相对集合视图的可见边界生效，并受所属分区范围约束；页脚吸底不是固定在整个屏幕底部的工具栏。
 - 原生轮播 section 直接创建自己的 boundary supplementary items；它与网格 section 共用注册和数据源机制。
 - 将某个 headerSize/footerSize 设为 nil 可省略对应布局项；不要对未注册的 kind 创建布局项。
+
+
+### 横向多分区
+
+“多分区”页面顶部可切换 **纵向 VGrid / 横向 HGrid**。横向模式使用同一个水平滚动的集合视图，每个分区通过 `UIKitLazyHGridLayout.makeSection(rows:...)` 独立配置。切换方向会重建布局并回到起点；单元格第二行显示当前实测行高。
+
+| 分区 | Header 宽度 | Footer 宽度 | 吸附行为 | 背景 |
+| --- | ---: | ---: | --- | --- |
+| fixed：3 行 × 72 | 72 pt | 52 pt | 不吸附 | 蓝色 |
+| flexible：2 行均分 | 64 pt | 60 pt | Header 吸附起始边缘 | 青色 |
+| adaptive：minimum 85 | 56 pt | 64 pt | Footer 吸附结束边缘 | 橙色 |
+| 混排 | 80 pt | 56 pt | 起始、结束双吸附 | 紫色 |
+| UIKit 原生纵向轮播 | 64 pt | 52 pt | 不吸附 | 粉色 |
+
+```swift
+let configuration = UICollectionViewCompositionalLayoutConfiguration()
+configuration.scrollDirection = .horizontal
+configuration.interSectionSpacing = 16
+
+let layout = UICollectionViewCompositionalLayout(
+    sectionProvider: { sectionIndex, environment in
+        // 不同分区可使用不同 rows、itemSize、headerSize 和 footerSize。
+        let section = UIKitLazyHGridLayout.makeSection(
+            rows: [UIKitGridItem(.fixed(60)), UIKitGridItem(.flexible(minimum: 70))],
+            alignment: .top,
+            spacing: 12,
+            pinnedViews: [.sectionHeaders, .sectionFooters],
+            itemSize: .fixed(80),       // 列宽
+            headerSize: .fixed(72),    // 页眉宽度
+            footerSize: .fixed(56),    // 页脚宽度
+            contentInsets: .init(top: 16, leading: 8, bottom: 16, trailing: 12),
+            environment: environment
+        )
+        let background = NSCollectionLayoutDecorationItem.background(
+            elementKind: SectionBackgroundView.elementKind
+        )
+        background.contentInsets = .init(top: 8, leading: 0, bottom: 8, trailing: 0)
+        background.zIndex = -1
+        section.decorationItems = [background]
+        return section
+    },
+    configuration: configuration
+)
+layout.register(SectionBackgroundView.self,
+                forDecorationViewOfKind: SectionBackgroundView.elementKind)
+```
+
+上例中的 `SectionBackgroundView` 是示例 App 类型。Header/footer 仍按标准 supplementary kind 注册并由数据源提供；横向页眉位于 `.leading`，页脚位于 `.trailing`，吸附相对集合视图的可见边界生效，不是全屏固定侧栏。原生轮播分区使用正交滚动，因宿主为横向，此处局部沿纵向滚动。
+
+Debug 启动参数 `--grid-sections --grid-axis horizontal` 可直接进入横向页面。以下截图为 **iPhone 17 Pro / iOS 26.5 模拟器**的真实运行画面，默认文字大小、从左至右布局；纵向截图见上方。
+
+| fixed：独立页眉页脚宽度 | flexible：页眉起始吸附 |
+| :---: | :---: |
+| <img src="Documentation/Screenshots/multi-sections-horizontal-start.jpg" alt="横向固定分区的独立页眉页脚宽度与背景" width="320"> | <img src="Documentation/Screenshots/multi-sections-horizontal-header.jpg" alt="横向 flexible 分区页眉吸附在起始边缘" width="320"> |
+| **adaptive：页脚结束吸附** | **混排双吸附与原生纵向轮播** |
+| <img src="Documentation/Screenshots/multi-sections-horizontal-footer.jpg" alt="横向 adaptive 分区页脚吸附在结束边缘" width="320"> | <img src="Documentation/Screenshots/multi-sections-horizontal-end.jpg" alt="横向混排的双边吸附及原生纵向轮播" width="320"> |
 
 
 ## 对比页
@@ -340,3 +396,5 @@ GridItemSizeLayoutDemo/
 本次辅助视图示例验证：Xcode MCP 在 iPhone 17 Pro / iOS 26.5 运行 App 集成测试，4 项全部通过，包含五个分区的 header/footer/背景布局检查和独立页眉吸附检查；运行页面已检查页脚吸附和各分区背景。此结果不代表重新执行了完整 UI 自动化套件。
 
 2026-10-28 主轴尺寸改动验证：iPhone 17 Pro / iOS 26.5 上包测试 34/34 通过，App 集成测试 5/5 通过。新增用例验证两个公开入口、两个方向的 self-sizing 增长/缩短与 uniform 同组尺寸、末组不满及 adaptive 重新分组、辅助视图测量、比例混排、容器变化，以及实际 UILabel 内容切换。未运行完整 UI 自动化套件或 iOS 15 运行时测试。
+
+横向多分区验证（2026-10-28）：Xcode MCP 构建通过，iPhone 17 Pro / iOS 26.5 上 8 项 App 集成测试和 1 项横向 SwiftUI 对比 UI 测试全部通过，其中补跑了原有主轴尺寸示例测试，确认两个方向的 uniform、内容增减及其他策略仍可用。实际查看横向五种分区并操作末尾的纵向轮播，新增四张截图。未重跑全部包测试或完整 UI 自动化套件。

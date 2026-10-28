@@ -27,77 +27,87 @@ enum CompositionalGridLayout {
 }
 
 extension CompositionalGridLayout {
-    /// 同一集合视图中的五个分区独立选择规则，最后一个分区使用 UIKit 原生横向轮播。
-    static func makeSections() -> UICollectionViewCompositionalLayout {
+    /// 每个分区独立选择规则，最后一个分区沿宿主的正交方向滚动。
+    static func makeSections(axis: GridAxis = .vertical) -> UICollectionViewCompositionalLayout {
+        let vertical = axis == .vertical
         let configuration = UICollectionViewCompositionalLayoutConfiguration()
+        configuration.scrollDirection = vertical ? .vertical : .horizontal
         configuration.interSectionSpacing = 16
         let layout = UICollectionViewCompositionalLayout(sectionProvider: { index, environment in
-            let style = SectionDemoStyle.all[index]
+            let style = SectionDemoStyle.styles(for: axis)[index]
             let section: NSCollectionLayoutSection
-            let insets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 12, trailing: 16)
-            switch index {
-            case 0:
-                section = UIKitLazyVGridLayout.makeSection(
-                    columns: Array(repeating: UIKitGridItem(.fixed(72), spacing: 10), count: 3),
-                    alignment: .leading, spacing: 8, pinnedViews: style.pinnedViews, itemSize: .fixed(48),
-                    headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
-                    contentInsets: insets, environment: environment
-                )
-            case 1:
-                section = UIKitLazyVGridLayout.makeSection(
-                    columns: Array(repeating: UIKitGridItem(.flexible(), spacing: 16), count: 2),
-                    spacing: 12, pinnedViews: style.pinnedViews, itemSize: .fixed(64),
-                    headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
-                    contentInsets: insets, environment: environment
-                )
-            case 2:
-                section = UIKitLazyVGridLayout.makeSection(
-                    columns: [UIKitGridItem(.adaptive(minimum: 85), spacing: 8)],
-                    spacing: 8, pinnedViews: style.pinnedViews, itemSize: .fixed(52),
-                    headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
-                    contentInsets: insets, environment: environment
-                )
-            case 3:
-                section = UIKitLazyVGridLayout.makeSection(
-                    columns: [UIKitGridItem(.fixed(60), spacing: 12),
+            let insets = vertical
+                ? NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 12, trailing: 16)
+                : NSDirectionalEdgeInsets(top: 16, leading: 8, bottom: 16, trailing: 12)
+            if index < 4 {
+                let tracks: [UIKitGridItem]
+                let spacing: CGFloat
+                let itemExtent: CGFloat
+                switch index {
+                case 0:
+                    tracks = Array(repeating: UIKitGridItem(.fixed(72), spacing: 10), count: 3)
+                    spacing = 8; itemExtent = 48
+                case 1:
+                    tracks = Array(repeating: UIKitGridItem(.flexible(), spacing: 16), count: 2)
+                    spacing = 12; itemExtent = 64
+                case 2:
+                    tracks = [UIKitGridItem(.adaptive(minimum: 85), spacing: 8)]
+                    spacing = 8; itemExtent = 52
+                default:
+                    tracks = [UIKitGridItem(.fixed(60), spacing: 12),
                               UIKitGridItem(.flexible(minimum: 70, maximum: 100), spacing: 12),
-                              UIKitGridItem(.adaptive(minimum: 55), spacing: 12)],
-                    alignment: .trailing, spacing: 10, pinnedViews: style.pinnedViews, itemSize: .fixed(60),
-                    headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
-                    contentInsets: insets, environment: environment
-                )
-            default:
-                // 原生 section 可与库生成的网格共存，并使用 UIKit 正交滚动。
+                              UIKitGridItem(.adaptive(minimum: 55), spacing: 12)]
+                    spacing = 10; itemExtent = 60
+                }
+                if vertical {
+                    section = UIKitLazyVGridLayout.makeSection(
+                        columns: tracks, alignment: index == 0 ? .leading : index == 3 ? .trailing : .center,
+                        spacing: spacing, pinnedViews: style.pinnedViews, itemSize: .fixed(itemExtent),
+                        headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
+                        contentInsets: insets, environment: environment
+                    )
+                } else {
+                    section = UIKitLazyHGridLayout.makeSection(
+                        rows: tracks, alignment: index == 0 ? .top : index == 3 ? .bottom : .center,
+                        spacing: spacing, pinnedViews: style.pinnedViews, itemSize: .fixed(itemExtent),
+                        headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
+                        contentInsets: insets, environment: environment
+                    )
+                }
+            } else {
                 let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(
                     widthDimension: .fractionalWidth(1), heightDimension: .fractionalHeight(1)
                 ))
                 let group = NSCollectionLayoutGroup.horizontal(
-                    layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(0.8), heightDimension: .absolute(90)),
-                    subitems: [item]
+                    layoutSize: NSCollectionLayoutSize(
+                        widthDimension: vertical ? .fractionalWidth(0.8) : .absolute(90),
+                        heightDimension: vertical ? .absolute(90) : .fractionalHeight(0.8)
+                    ), subitems: [item]
                 )
                 section = NSCollectionLayoutSection(group: group)
                 section.orthogonalScrollingBehavior = .continuousGroupLeadingBoundary
                 section.interGroupSpacing = 12
                 section.contentInsets = insets
-                let header = NSCollectionLayoutBoundarySupplementaryItem(
-                    layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1),
-                                                       heightDimension: .absolute(style.headerHeight)),
-                    elementKind: UICollectionView.elementKindSectionHeader, alignment: .top
-                )
-                let footer = NSCollectionLayoutBoundarySupplementaryItem(
-                    layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1),
-                                                       heightDimension: .absolute(style.footerHeight)),
-                    elementKind: UICollectionView.elementKindSectionFooter, alignment: .bottom
-                )
-                header.pinToVisibleBounds = style.pinnedViews.contains(.sectionHeaders)
-                footer.pinToVisibleBounds = style.pinnedViews.contains(.sectionFooters)
-                header.zIndex = 2
-                footer.zIndex = 2
-                section.boundarySupplementaryItems = [header, footer]
+                func boundary(_ header: Bool) -> NSCollectionLayoutBoundarySupplementaryItem {
+                    let extent = header ? style.headerHeight : style.footerHeight
+                    let boundary = NSCollectionLayoutBoundarySupplementaryItem(
+                        layoutSize: NSCollectionLayoutSize(
+                            widthDimension: vertical ? .fractionalWidth(1) : .absolute(extent),
+                            heightDimension: vertical ? .absolute(extent) : .fractionalHeight(1)
+                        ),
+                        elementKind: header ? UICollectionView.elementKindSectionHeader : UICollectionView.elementKindSectionFooter,
+                        alignment: vertical ? (header ? .top : .bottom) : (header ? .leading : .trailing)
+                    )
+                    boundary.pinToVisibleBounds = style.pinnedViews.contains(header ? .sectionHeaders : .sectionFooters)
+                    boundary.zIndex = 2
+                    return boundary
+                }
+                section.boundarySupplementaryItems = [boundary(true), boundary(false)]
             }
-            // 背景是 decoration，由 layout 注册；header/footer 是 supplementary，由数据源提供。
             let background = NSCollectionLayoutDecorationItem.background(elementKind: SectionBackgroundView.elementKind)
-            background.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8)
+            background.contentInsets = vertical
+                ? NSDirectionalEdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8)
+                : NSDirectionalEdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0)
             background.zIndex = -1
             section.decorationItems = [background]
             return section
@@ -128,6 +138,22 @@ struct SectionDemoStyle {
         .init(title: "UIKit 原生横向轮播", itemCount: 5, headerHeight: 36, footerHeight: 28,
               pinnedViews: [], color: .systemPink)
     ]
+
+    /// 沿用字段名存储主轴尺寸：纵向表示高度，横向表示宽度。
+    static func styles(for axis: GridAxis) -> [SectionDemoStyle] {
+        guard axis == .horizontal else { return all }
+        let titles = ["fixed · 3 行 × 72", "flexible · 2 行均分", "adaptive · minimum 85",
+                      "混排 · fixed + flexible + adaptive", "UIKit 原生纵向轮播"]
+        let counts = [12, 20, 36, 40, 5]
+        let headers: [CGFloat] = [72, 64, 56, 80, 64]
+        let footers: [CGFloat] = [52, 60, 64, 56, 52]
+        return all.enumerated().map { index, style in
+            SectionDemoStyle(title: titles[index], itemCount: counts[index],
+                             headerHeight: headers[index], footerHeight: footers[index],
+                             pinnedViews: style.pinnedViews, color: style.color)
+        }
+    }
+
 }
 
 /// 背景由 UICollectionViewCompositionalLayout 创建，不经过数据源的 supplementary 回调。
