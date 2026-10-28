@@ -2,7 +2,7 @@
 
 使用同一组参数，对比 SwiftUI `LazyVGrid` / `LazyHGrid` 和 UIKit compositional layout。
 
-布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。当前示例的 submodule 固定到本地库提交 `1aefebf2a10c132155b92ae8efa8b41238d5af27`，包含未发布的 API 命名调整（在 0.3.0 基础上将水平对齐类型改为 `UIKitGridHorizontalAlignment`）。该提交尚未推送；已发布的 0.3.0 不包含新类型名。原有主轴尺寸与多分区示例仍保留。
+布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。当前示例的 submodule 固定到库提交 [`1aefebf`](https://github.com/astralchen/UIKitGridLayouts/commit/1aefebf2a10c132155b92ae8efa8b41238d5af27)，该提交已合入并推送到库的 `main`，包含尚未发布版本的 API 命名调整（在 0.3.0 基础上将水平对齐类型改为 `UIKitGridHorizontalAlignment`）。已发布的 0.3.0 不包含新类型名。原有主轴尺寸与多分区示例仍保留。
 
 ## SwiftUI 风格的参数命名（未发布）
 
