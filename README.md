@@ -2,9 +2,9 @@
 
 使用同一组参数，对比 SwiftUI `LazyVGrid` / `LazyHGrid` 和 UIKit compositional layout。
 
-布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。当前示例的 submodule 固定到库提交 [`1aefebf`](https://github.com/astralchen/UIKitGridLayouts/commit/1aefebf2a10c132155b92ae8efa8b41238d5af27)，该提交已合入并推送到库的 `main`，包含尚未发布版本的 API 命名调整（在 0.3.0 基础上将水平对齐类型改为 `UIKitGridHorizontalAlignment`）。已发布的 0.3.0 不包含新类型名。原有主轴尺寸与多分区示例仍保留。
+布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。当前示例的 submodule 固定到 [UIKitGridLayouts 0.4.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.4.0) 标签对应提交 `89aa339cc5651147c3c6265c0c931dd701bb45a7`。该版本包含不兼容的 API 命名调整：`UIKitGridAlignment` 改为 `UIKitGridHorizontalAlignment`，迁移方式见下文。原有主轴尺寸与多分区示例仍保留。
 
-## SwiftUI 风格的参数命名（未发布）
+## SwiftUI 风格的参数命名（0.4.0）
 
 初始化器与 `makeSection` 使用相同命名，对齐类型明确区分交叉轴：
 
@@ -29,7 +29,7 @@ let horizontal = UIKitLazyHGridLayout(
 
 `columns` 定义列宽，`rows` 定义行高，数组均不能为空。`alignment` 控制整组轨道在交叉轴剩余空间中的位置，默认 `.center`；水平选项为 `.leading / .center / .trailing`，垂直选项为 `.top / .center / .bottom`。库最低 iOS 15，示例最低 iOS 16。命名对齐 SwiftUI，不代表所有布局测量行为相同。
 
-**从 0.3.0 迁移：** 将显式类型声明、extension 和类型别名中的 `UIKitGridAlignment` 改为 `UIKitGridHorizontalAlignment`。旧类型名已移除，不提供兼容 typealias。`alignment: .center` 等可推断类型的调用无需修改；`rows:`、`columns:`、`spacing:`、`pinnedViews:` 以及主轴尺寸参数保持不变。该改动同时适用于初始化器和分区工厂，布局算法与默认值保持不变。
+**从 0.3.x 迁移到 0.4.0：** 将显式类型声明、extension 和类型别名中的 `UIKitGridAlignment` 改为 `UIKitGridHorizontalAlignment`。旧类型名已移除，不提供兼容 typealias。`alignment: .center` 等可推断类型的调用无需修改；`rows:`、`columns:`、`spacing:`、`pinnedViews:` 以及主轴尺寸参数保持不变。该改动同时适用于初始化器和分区工厂，布局算法与默认值保持不变。
 
 示例首页切换 VGrid / HGrid，再点击“参数 / 代码”，即可查看当前配置与完整对齐类型。以下是 2026-10-28 在 **iPhone 17 Pro / iOS 26.5 模拟器**实际运行更新后 App 的截图：fixed、3 条 72 pt 轨道、居中、主轴及轨道间距 12 pt、页眉开启；Debug 参数 `--grid-api` 直接打开代码页，横向另加 `--grid-axis horizontal`。
 
@@ -436,3 +436,5 @@ GridItemSizeLayoutDemo/
 SwiftUI 风格命名调整验证（2026-10-28）：Xcode 27.1、iPhone 17 Pro / iOS 26.5 上示例构建启动成功，库测试 34/34、App 集成测试 8/8 通过；实际查看纵向和横向参数代码页，并保存上述两张新截图。Swift 6 模式下全部库源码的 iOS 15 Simulator 目标 typecheck 通过（仅编译兼容性）。未执行完整 UI 自动化套件、真机或 iOS 15 运行时验收。完整记录见 [库验证记录](Packages/UIKitGridLayouts/RELEASING.md)。
 
 示例内部命名清理验证（2026-10-28）：共享配置采用 `swiftUITracks`、`uiKitTracks`、`spacing`、`trackSpacing` 和主轴 `Extent` 命名，同步调用、测试引用及文档示例。清理后工程构建通过，8 项 App 集成测试全部通过；库源码与公开 API 未因这次内部清理而改变。
+
+0.4.0 发布同步（2026-10-28）：示例 submodule 固定到库 `0.4.0` 标签对应提交 `89aa339`。此次发布仅更新版本文档，库源码、测试、Package.swift 和截图与已验证的 `1aefebf` 一致；示例源码与集成测试通过的命名清理版本一致，沿用上述结果。
