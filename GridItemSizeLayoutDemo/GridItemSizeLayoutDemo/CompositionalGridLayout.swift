@@ -31,33 +31,39 @@ extension CompositionalGridLayout {
     static func makeSections() -> UICollectionViewCompositionalLayout {
         let configuration = UICollectionViewCompositionalLayoutConfiguration()
         configuration.interSectionSpacing = 16
-        return UICollectionViewCompositionalLayout(sectionProvider: { index, environment in
+        let layout = UICollectionViewCompositionalLayout(sectionProvider: { index, environment in
+            let style = SectionDemoStyle.all[index]
+            let section: NSCollectionLayoutSection
             let insets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 12, trailing: 16)
             switch index {
             case 0:
-                return UIKitLazyVGridLayout.makeSection(
+                section = UIKitLazyVGridLayout.makeSection(
                     columns: Array(repeating: UIKitGridItem(.fixed(72), spacing: 10), count: 3),
-                    alignment: .leading, spacing: 8, rowHeight: 48, headerHeight: 32,
+                    alignment: .leading, spacing: 8, pinnedViews: style.pinnedViews, rowHeight: 48,
+                    headerHeight: style.headerHeight, footerHeight: style.footerHeight,
                     contentInsets: insets, environment: environment
                 )
             case 1:
-                return UIKitLazyVGridLayout.makeSection(
+                section = UIKitLazyVGridLayout.makeSection(
                     columns: Array(repeating: UIKitGridItem(.flexible(), spacing: 16), count: 2),
-                    spacing: 12, rowHeight: 64, headerHeight: 32,
+                    spacing: 12, pinnedViews: style.pinnedViews, rowHeight: 64,
+                    headerHeight: style.headerHeight, footerHeight: style.footerHeight,
                     contentInsets: insets, environment: environment
                 )
             case 2:
-                return UIKitLazyVGridLayout.makeSection(
+                section = UIKitLazyVGridLayout.makeSection(
                     columns: [UIKitGridItem(.adaptive(minimum: 85), spacing: 8)],
-                    spacing: 8, rowHeight: 52, headerHeight: 32,
+                    spacing: 8, pinnedViews: style.pinnedViews, rowHeight: 52,
+                    headerHeight: style.headerHeight, footerHeight: style.footerHeight,
                     contentInsets: insets, environment: environment
                 )
             case 3:
-                return UIKitLazyVGridLayout.makeSection(
+                section = UIKitLazyVGridLayout.makeSection(
                     columns: [UIKitGridItem(.fixed(60), spacing: 12),
                               UIKitGridItem(.flexible(minimum: 70, maximum: 100), spacing: 12),
                               UIKitGridItem(.adaptive(minimum: 55), spacing: 12)],
-                    alignment: .trailing, spacing: 10, rowHeight: 60, headerHeight: 32,
+                    alignment: .trailing, spacing: 10, pinnedViews: style.pinnedViews, rowHeight: 60,
+                    headerHeight: style.headerHeight, footerHeight: style.footerHeight,
                     contentInsets: insets, environment: environment
                 )
             default:
@@ -69,16 +75,76 @@ extension CompositionalGridLayout {
                     layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(0.8), heightDimension: .absolute(90)),
                     subitems: [item]
                 )
-                let section = NSCollectionLayoutSection(group: group)
+                section = NSCollectionLayoutSection(group: group)
                 section.orthogonalScrollingBehavior = .continuousGroupLeadingBoundary
                 section.interGroupSpacing = 12
                 section.contentInsets = insets
-                section.boundarySupplementaryItems = [NSCollectionLayoutBoundarySupplementaryItem(
-                    layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .absolute(32)),
+                let header = NSCollectionLayoutBoundarySupplementaryItem(
+                    layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1),
+                                                       heightDimension: .absolute(style.headerHeight)),
                     elementKind: UICollectionView.elementKindSectionHeader, alignment: .top
-                )]
-                return section
+                )
+                let footer = NSCollectionLayoutBoundarySupplementaryItem(
+                    layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1),
+                                                       heightDimension: .absolute(style.footerHeight)),
+                    elementKind: UICollectionView.elementKindSectionFooter, alignment: .bottom
+                )
+                header.pinToVisibleBounds = style.pinnedViews.contains(.sectionHeaders)
+                footer.pinToVisibleBounds = style.pinnedViews.contains(.sectionFooters)
+                header.zIndex = 2
+                footer.zIndex = 2
+                section.boundarySupplementaryItems = [header, footer]
             }
+            // 背景是 decoration，由 layout 注册；header/footer 是 supplementary，由数据源提供。
+            let background = NSCollectionLayoutDecorationItem.background(elementKind: SectionBackgroundView.elementKind)
+            background.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8)
+            background.zIndex = -1
+            section.decorationItems = [background]
+            return section
         }, configuration: configuration)
+        layout.register(SectionBackgroundView.self, forDecorationViewOfKind: SectionBackgroundView.elementKind)
+        return layout
+    }
+}
+
+/// 每个分区分别声明辅助视图尺寸、吸附选项与背景色，布局和数据源共用这些示例参数。
+struct SectionDemoStyle {
+    let title: String
+    let itemCount: Int
+    let headerHeight: CGFloat
+    let footerHeight: CGFloat
+    let pinnedViews: UIKitPinnedScrollableViews
+    let color: UIColor
+
+    static let all: [SectionDemoStyle] = [
+        .init(title: "fixed · 3 列 × 72", itemCount: 9, headerHeight: 36, footerHeight: 28,
+              pinnedViews: [], color: .systemBlue),
+        .init(title: "flexible · 2 列均分", itemCount: 16, headerHeight: 44, footerHeight: 32,
+              pinnedViews: [.sectionHeaders], color: .systemTeal),
+        .init(title: "adaptive · minimum 85", itemCount: 24, headerHeight: 36, footerHeight: 36,
+              pinnedViews: [.sectionFooters], color: .systemOrange),
+        .init(title: "混排 · fixed + flexible + adaptive", itemCount: 32, headerHeight: 44, footerHeight: 32,
+              pinnedViews: [.sectionHeaders, .sectionFooters], color: .systemPurple),
+        .init(title: "UIKit 原生横向轮播", itemCount: 5, headerHeight: 36, footerHeight: 28,
+              pinnedViews: [], color: .systemPink)
+    ]
+}
+
+/// 背景由 UICollectionViewCompositionalLayout 创建，不经过数据源的 supplementary 回调。
+final class SectionBackgroundView: UICollectionReusableView {
+    static let elementKind = "demo.section.background"
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        layer.cornerRadius = 14
+        isUserInteractionEnabled = false
+        accessibilityElementsHidden = true
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use init(frame:)") }
+
+    override func apply(_ layoutAttributes: UICollectionViewLayoutAttributes) {
+        super.apply(layoutAttributes)
+        backgroundColor = SectionDemoStyle.all[layoutAttributes.indexPath.section].color.withAlphaComponent(0.10)
     }
 }

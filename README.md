@@ -2,7 +2,7 @@
 
 使用同一组参数，对比 SwiftUI `LazyVGrid` / `LazyHGrid` 和 UIKit compositional layout。
 
-布局库已拆为独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)。Demo 通过 Git submodule 固定到 [UIKitGridLayouts 0.2.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.2.0)，仍使用本地 Swift Package 路径 `../Packages/UIKitGridLayouts`，不需要修改 Xcode 工程引用。
+布局库已拆为独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)。Demo 使用 [UIKitGridLayouts 0.2.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.2.0) 的布局 API，Git submodule 固定到后续文档更新提交 [`7dcd8dd`](https://github.com/astralchen/UIKitGridLayouts/commit/7dcd8dd)，该提交仅更新 README 和运行截图，库源码与 0.2.0 一致。示例仍使用本地 Swift Package 路径 `../Packages/UIKitGridLayouts`，不需要修改 Xcode 工程引用。
 
 ## 运行截图
 
@@ -31,11 +31,85 @@
 示例通过 `UIKitLazyVGridLayout.makeSection(..., environment:)` 生成分区，并在外层 `sectionProvider` 按索引选择；横向宿主对应 `UIKitLazyHGridLayout.makeSection`。此 API 从 UIKitGridLayouts 0.2.0 起提供。Debug 参数 `--grid-sections` 可直接打开该页面。
 
 
-| 独立 fixed / flexible / adaptive 分区 | 混排分区与原生横向轮播 |
+| 独立页眉页脚与分区背景 | 吸附配置与原生横向轮播 |
 | :---: | :---: |
-| <img src="Documentation/Screenshots/multi-sections-top.jpg" alt="多分区上半页真实运行截图" width="320"> | <img src="Documentation/Screenshots/multi-sections-bottom.jpg" alt="混排和 UIKit 原生轮播分区真实运行截图" width="320"> |
+| <img src="Documentation/Screenshots/multi-sections-top.jpg" alt="各分区独立页眉页脚与背景的真实运行截图" width="320"> | <img src="Documentation/Screenshots/multi-sections-bottom.jpg" alt="混排分区吸附页眉页脚及原生轮播背景的真实运行截图" width="320"> |
 
 以上为 iPhone 17 Pro / iOS 26.5 的多分区页面运行截图。
+
+### 每个分区独立配置辅助视图与背景
+
+“多分区”页同时演示以下配置；页眉和页脚文本直接标明吸附状态，背景使用不同颜色区分分区。分区包含足够多的单元格，可上下滚动观察辅助视图在所属分区范围内的吸附和离开。
+
+| 分区 | Header 高度 | Footer 高度 | 吸附选项 | 背景 |
+| --- | ---: | ---: | --- | --- |
+| fixed | 36 pt | 28 pt | 不吸附 | 蓝色 |
+| flexible | 44 pt | 32 pt | `.sectionHeaders` | 青色 |
+| adaptive | 36 pt | 36 pt | `.sectionFooters` | 橙色 |
+| 混排 | 44 pt | 32 pt | `[.sectionHeaders, .sectionFooters]` | 紫色 |
+| UIKit 原生轮播 | 36 pt | 28 pt | 不吸附 | 粉色 |
+
+网格分区通过 `makeSection` 的参数分别指定 header、footer 和吸附。背景则使用 UIKit 的 decoration：
+
+```swift
+let layout = UICollectionViewCompositionalLayout { sectionIndex, environment in
+    // 示例参数按分区独立存放；可替换为你的数据模型。
+    let style = SectionDemoStyle.all[sectionIndex]
+    let section = UIKitLazyVGridLayout.makeSection(
+        columns: [UIKitGridItem(.adaptive(minimum: 85), spacing: 8)],
+        spacing: 12,
+        pinnedViews: style.pinnedViews,
+        rowHeight: 56,
+        headerHeight: style.headerHeight,
+        footerHeight: style.footerHeight,
+        contentInsets: .init(top: 8, leading: 16, bottom: 12, trailing: 16),
+        environment: environment
+    )
+    let background = NSCollectionLayoutDecorationItem.background(
+        elementKind: SectionBackgroundView.elementKind
+    )
+    background.contentInsets = .init(top: 0, leading: 8, bottom: 0, trailing: 8)
+    background.zIndex = -1
+    section.decorationItems = [background]
+    return section
+}
+layout.register(
+    SectionBackgroundView.self,
+    forDecorationViewOfKind: SectionBackgroundView.elementKind
+)
+```
+
+`SectionDemoStyle`、`SectionBackgroundView` 和下面的 `SectionBoundaryView` 都是示例 App 中定义的类型，不属于 UIKitGridLayouts 的公开 API。背景视图在 `apply(_:)` 中读取 `layoutAttributes.indexPath.section`，使用该分区的颜色；复用时每次重新设置颜色。
+
+Header/footer 属于 supplementary view，由集合视图注册并由数据源提供。只设置尺寸或 `pinnedViews` 不会自动创建视图：
+
+```swift
+for kind in [UICollectionView.elementKindSectionHeader,
+             UICollectionView.elementKindSectionFooter] {
+    collectionView.register(
+        SectionBoundaryView.self,
+        forSupplementaryViewOfKind: kind,
+        withReuseIdentifier: "boundary"
+    )
+}
+
+// 在数据源的 viewForSupplementaryElementOfKind 回调中：
+let view = collectionView.dequeueReusableSupplementaryView(
+    ofKind: kind, withReuseIdentifier: "boundary", for: indexPath
+) as! SectionBoundaryView
+view.configure(
+    section: indexPath.section,
+    isHeader: kind == UICollectionView.elementKindSectionHeader
+)
+return view
+```
+
+- Header/footer 分别通过 `kind` 配置内容；示例每次复用都会覆盖文本、颜色和无障碍标识。
+- Decoration 由 layout 管理，不进入数据源的 supplementary 回调，也不增加数据源的 item 数量。
+- `pinToVisibleBounds` 相对集合视图的可见边界生效，并受所属分区范围约束；页脚吸底不是固定在整个屏幕底部的工具栏。
+- 原生轮播 section 直接创建自己的 boundary supplementary items；它与网格 section 共用注册和数据源机制。
+- 将某个 header/footer 尺寸设为 0 可省略对应布局项；不要对未注册的 kind 创建布局项。
+
 
 ## 对比页
 
@@ -128,7 +202,7 @@ let layout = UIKitLazyVGridLayout(
 - `spacing: nil` 在包内明确为 **8 pt**。SwiftUI 的 nil 是系统默认值，不保证与这里相同。
 - UIKit 需要固定主轴尺寸：VGrid 的 `rowHeight` / HGrid 的 `columnWidth`。本版不实现 self-sizing cell。
 - header / footer 尺寸默认为 0，不创建对应 supplementary item。传入正尺寸时，数据源必须提供相应标准 element kind 的视图；`pinnedViews` 只控制吸附，不自动创建内容。
-- `sectionHeaders` / `sectionFooters` 可以同时使用。演示页只展示 header。
+- `sectionHeaders` / `sectionFooters` 可以同时使用。对比页展示 header；多分区页同时展示 header、footer 和独立吸附。
 - 支持混合轨道：先扣除 fixed 和间距，再按顺序分配其余轨道，最后展开 adaptive。不同上下限的混排与 SwiftUI 的提议尺寸、多轮测量行为不承诺逐像素一致。
 - 极窄容器下 fixed / flexible 保持固定值或 minimum，可能溢出；adaptive 的单条轨道允许缩小到容器尺寸。示例对预览边界进行裁剪。
 - 输入必须至少有一条轨道；固定尺寸、minimum、主轴尺寸为有限正数；maximum 不小于 minimum；间距为有限非负数。非法输入通过 precondition 及时暴露。
@@ -160,3 +234,5 @@ GridItemSizeLayoutDemo/
 此前新增 App 输入一致性测试及混合 UI 对比测试已编译，但运行停在模拟器测试宿主启动阶段，取消后未得到断言结果；不能将包测试结果视作完整的 SwiftUI / UIKit UI 一致性验证。
 
 参考：[LazyVGrid](https://developer.apple.com/documentation/swiftui/lazyvgrid)、[LazyHGrid](https://developer.apple.com/documentation/swiftui/lazyhgrid)、[UICollectionViewCompositionalLayout](https://developer.apple.com/documentation/uikit/uicollectionviewcompositionallayout)。
+
+本次辅助视图示例验证：Xcode MCP 在 iPhone 17 Pro / iOS 26.5 运行 App 集成测试，4 项全部通过，包含五个分区的 header/footer/背景布局检查和独立页眉吸附检查；运行页面已检查页脚吸附和各分区背景。此结果不代表重新执行了完整 UI 自动化套件。

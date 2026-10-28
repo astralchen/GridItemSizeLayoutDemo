@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UIKitGridLayouts
 
 struct UIKitGridView: UIViewControllerRepresentable {
     let configuration: GridConfiguration
@@ -159,7 +160,7 @@ struct SectionLayoutsDemo: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                Text("每个分区独立设置尺寸、间距和对齐；底部为 UIKit 原生横向轮播。")
+                Text("各分区使用独立页眉、页脚与背景。上下滚动观察吸顶、吸底和双吸附；底部可横向滑动。")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .padding()
@@ -177,10 +178,7 @@ private struct SectionLayoutsView: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: SectionLayoutsController, context: Context) {}
 }
 
-private final class SectionLayoutsController: UICollectionViewController {
-    private let titles = ["1 · fixed：3 列 × 72", "2 · flexible：2 列均分", "3 · adaptive：minimum 85",
-                          "4 · 混排：fixed + flexible + adaptive", "5 · UIKit 原生横向轮播"]
-    private let counts = [6, 4, 8, 8, 5]
+final class SectionLayoutsController: UICollectionViewController {
 
     init() { super.init(collectionViewLayout: CompositionalGridLayout.makeSections()) }
     required init?(coder: NSCoder) { fatalError("Use init()") }
@@ -190,25 +188,64 @@ private final class SectionLayoutsController: UICollectionViewController {
         collectionView.backgroundColor = .systemGroupedBackground
         collectionView.accessibilityIdentifier = "uikit.sections"
         collectionView.register(GridCell.self, forCellWithReuseIdentifier: "cell")
-        collectionView.register(GridHeader.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
-                                withReuseIdentifier: "header")
+        for kind in [UICollectionView.elementKindSectionHeader, UICollectionView.elementKindSectionFooter] {
+            collectionView.register(SectionBoundaryView.self, forSupplementaryViewOfKind: kind,
+                                    withReuseIdentifier: "boundary")
+        }
     }
 
-    override func numberOfSections(in collectionView: UICollectionView) -> Int { titles.count }
+    override func numberOfSections(in collectionView: UICollectionView) -> Int { SectionDemoStyle.all.count }
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        counts[section]
+        SectionDemoStyle.all[section].itemCount
     }
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath) as! GridCell
-        cell.configure(index: counts.prefix(indexPath.section).reduce(0, +) + indexPath.item, axis: .vertical)
+        let offset = SectionDemoStyle.all.prefix(indexPath.section).reduce(0) { $0 + $1.itemCount }
+        cell.configure(index: offset + indexPath.item, axis: .vertical)
         cell.accessibilityIdentifier = "sections.cell.\(indexPath.section).\(indexPath.item)"
         return cell
     }
     override func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String,
                                  at indexPath: IndexPath) -> UICollectionReusableView {
-        let header = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: "header",
-                                                                     for: indexPath) as! GridHeader
-        header.configure(section: indexPath.section, axis: .vertical, customTitle: titles[indexPath.section])
-        return header
+        let view = collectionView.dequeueReusableSupplementaryView(
+            ofKind: kind, withReuseIdentifier: "boundary", for: indexPath
+        ) as! SectionBoundaryView
+        view.configure(section: indexPath.section, isHeader: kind == UICollectionView.elementKindSectionHeader)
+        return view
+    }
+}
+
+/// 同一复用类分别注册为 header 和 footer；每次配置都覆盖文本、颜色和无障碍标识。
+private final class SectionBoundaryView: UICollectionReusableView {
+    private let label = UILabel()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .secondarySystemGroupedBackground
+        layer.cornerRadius = 8
+        label.font = .systemFont(ofSize: 12, weight: .semibold)
+        label.numberOfLines = 2
+        label.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
+            label.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
+        isAccessibilityElement = true
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use init(frame:)") }
+
+    func configure(section: Int, isHeader: Bool) {
+        let style = SectionDemoStyle.all[section]
+        let pinned = style.pinnedViews.contains(isHeader ? .sectionHeaders : .sectionFooters)
+        let title = isHeader
+            ? "\(section + 1) · \(style.title) · \(pinned ? "页眉吸顶" : "普通页眉")"
+            : "\(style.itemCount) 项 · \(Int(style.footerHeight)) pt 页脚 · \(pinned ? "吸底" : "不吸附")"
+        label.text = title
+        label.textColor = style.color
+        accessibilityLabel = title
+        accessibilityIdentifier = "sections.\(isHeader ? "header" : "footer").\(section)"
     }
 }
