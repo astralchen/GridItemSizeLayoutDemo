@@ -10,8 +10,8 @@ final class GridItemSizeLayoutDemoTests: XCTestCase {
         configuration.sizing = .mixed
         for capped in [false, true] {
             configuration.limitMaximum = capped
-            let swift = configuration.columns
-            let ui = configuration.uiKitColumns
+            let swift = configuration.swiftUITracks
+            let ui = configuration.uiKitTracks
             XCTAssertEqual(swift.count, 3)
             XCTAssertEqual(ui.count, 3)
             for (s, u) in zip(swift, ui) {
@@ -49,8 +49,8 @@ final class GridItemSizeLayoutDemoTests: XCTestCase {
                 ofKind: UICollectionView.elementKindSectionFooter, at: indexPath))
             let background = try XCTUnwrap(layout.layoutAttributesForDecorationView(
                 ofKind: SectionBackgroundView.elementKind, at: indexPath))
-            XCTAssertEqual(header.size.height, SectionDemoStyle.all[section].headerHeight)
-            XCTAssertEqual(footer.size.height, SectionDemoStyle.all[section].footerHeight)
+            XCTAssertEqual(header.size.height, SectionDemoStyle.all[section].headerExtent)
+            XCTAssertEqual(footer.size.height, SectionDemoStyle.all[section].footerExtent)
             XCTAssertLessThan(background.zIndex, header.zIndex)
             XCTAssertGreaterThan(background.frame.height, 0)
         }
@@ -99,8 +99,8 @@ final class GridItemSizeLayoutDemoTests: XCTestCase {
                 ofKind: UICollectionView.elementKindSectionFooter, at: path))
             let background = try XCTUnwrap(layout.layoutAttributesForDecorationView(
                 ofKind: SectionBackgroundView.elementKind, at: path))
-            XCTAssertEqual(header.size.width, styles[section].headerHeight, accuracy: 0.5)
-            XCTAssertEqual(footer.size.width, styles[section].footerHeight, accuracy: 0.5)
+            XCTAssertEqual(header.size.width, styles[section].headerExtent, accuracy: 0.5)
+            XCTAssertEqual(footer.size.width, styles[section].footerExtent, accuracy: 0.5)
             XCTAssertGreaterThan(footer.frame.minX, header.frame.minX)
             XCTAssertLessThan(background.zIndex, header.zIndex)
             XCTAssertGreaterThan(background.size.width, 0)

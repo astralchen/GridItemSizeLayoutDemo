@@ -22,9 +22,9 @@ enum GridSizing: String, CaseIterable, Identifiable {
     }
 }
 
-typealias GridAlignment = UIKitGridAlignment
+typealias GridAlignment = UIKitGridHorizontalAlignment
 
-extension UIKitGridAlignment {
+extension UIKitGridHorizontalAlignment {
     var swiftUI: HorizontalAlignment {
         switch self {
         case .leading: return .leading
@@ -49,18 +49,18 @@ enum PreviewWidth: String, CaseIterable, Identifiable {
     }
 }
 
-/// 两个框架只共享输入参数；SwiftUI 的列宽由真正的 LazyVGrid 自行计算。
+/// 两个框架只共享输入参数；SwiftUI 的轨道尺寸由真正的 LazyVGrid / LazyHGrid 自行计算。
 struct GridConfiguration: Hashable {
     var axis: GridAxis = .vertical
     var sizing: GridSizing = .fixed
     var alignment: GridAlignment = .center
-    var rowSpacing: CGFloat = 12
+    var spacing: CGFloat = 12
     var pinHeaders = true
     var limitMaximum = false
 
-    static let columnSpacing: CGFloat = 12
-    static let rowHeight: CGFloat = 56
-    static let headerHeight: CGFloat = 28
+    static let trackSpacing: CGFloat = 12
+    static let itemExtent: CGFloat = 56
+    static let headerExtent: CGFloat = 28
     static let itemsPerSection = 18
     static let sectionCount = 2
 
@@ -95,45 +95,45 @@ struct GridConfiguration: Hashable {
 
     var maximum: CGFloat { limitMaximum ? 112 : .infinity }
 
-    var columns: [GridItem] {
+    var swiftUITracks: [GridItem] {
         let size: GridItem.Size
         switch sizing {
         case .mixed:
             return [
-                GridItem(.fixed(70), spacing: Self.columnSpacing),
-                GridItem(.flexible(minimum: 80, maximum: min(140, maximum)), spacing: Self.columnSpacing),
-                GridItem(.adaptive(minimum: 60, maximum: maximum), spacing: Self.columnSpacing)
+                GridItem(.fixed(70), spacing: Self.trackSpacing),
+                GridItem(.flexible(minimum: 80, maximum: min(140, maximum)), spacing: Self.trackSpacing),
+                GridItem(.adaptive(minimum: 60, maximum: maximum), spacing: Self.trackSpacing)
             ]
         case .fixed: size = .fixed(72)
         case .flexible: size = .flexible(minimum: 64, maximum: maximum)
         case .adaptive: size = .adaptive(minimum: 80, maximum: maximum)
         }
         return Array(
-            repeating: GridItem(size, spacing: Self.columnSpacing),
+            repeating: GridItem(size, spacing: Self.trackSpacing),
             count: sizing == .adaptive ? 1 : 3
         )
     }
 
-    var uiKitColumns: [UIKitGridItem] {
+    var uiKitTracks: [UIKitGridItem] {
         let size: UIKitGridItem.Size
         switch sizing {
         case .mixed:
             return [
-                UIKitGridItem(.fixed(70), spacing: Self.columnSpacing),
-                UIKitGridItem(.flexible(minimum: 80, maximum: min(140, maximum)), spacing: Self.columnSpacing),
-                UIKitGridItem(.adaptive(minimum: 60, maximum: maximum), spacing: Self.columnSpacing)
+                UIKitGridItem(.fixed(70), spacing: Self.trackSpacing),
+                UIKitGridItem(.flexible(minimum: 80, maximum: min(140, maximum)), spacing: Self.trackSpacing),
+                UIKitGridItem(.adaptive(minimum: 60, maximum: maximum), spacing: Self.trackSpacing)
             ]
         case .fixed: size = .fixed(72)
         case .flexible: size = .flexible(minimum: 64, maximum: maximum)
         case .adaptive: size = .adaptive(minimum: 80, maximum: maximum)
         }
         return Array(
-            repeating: UIKitGridItem(size, spacing: Self.columnSpacing),
+            repeating: UIKitGridItem(size, spacing: Self.trackSpacing),
             count: sizing == .adaptive ? 1 : 3
         )
     }
 
-    private func columnCode(type: String) -> String {
+    private func trackCode(type: String) -> String {
         let maximumText = limitMaximum ? "112" : ".infinity"
         switch sizing {
         case .fixed:
@@ -157,13 +157,13 @@ struct GridConfiguration: Hashable {
         let tracks = axis == .vertical ? "columns" : "rows"
         let grid = axis == .vertical ? "LazyVGrid" : "LazyHGrid"
         return """
-        let \(tracks) = \(columnCode(type: "GridItem"))
+        let \(tracks) = \(trackCode(type: "GridItem"))
 
         ScrollView(\(axis == .vertical ? ".vertical" : ".horizontal")) {
             \(grid)(
                 \(tracks): \(tracks),
                 alignment: .\(alignmentName),
-                spacing: \(Int(rowSpacing)),
+                spacing: \(Int(spacing)),
                 pinnedViews: \(pinHeaders ? "[.sectionHeaders]" : "[]")
             ) {
                 Section {
@@ -182,12 +182,13 @@ struct GridConfiguration: Hashable {
         let tracks = axis == .vertical ? "columns" : "rows"
         let grid = axis == .vertical ? "UIKitLazyVGridLayout" : "UIKitLazyHGridLayout"
         return """
-        let \(tracks) = \(columnCode(type: "UIKitGridItem"))
+        let \(tracks) = \(trackCode(type: "UIKitGridItem"))
+        let alignment: \(axis == .vertical ? "UIKitGridHorizontalAlignment" : "UIKitGridVerticalAlignment") = .\(alignmentName)
 
         let layout = \(grid)(
             \(tracks): \(tracks),
-            alignment: .\(alignmentName),
-            spacing: \(Int(rowSpacing)),
+            alignment: alignment,
+            spacing: \(Int(spacing)),
             pinnedViews: \(pinHeaders ? "[.sectionHeaders]" : "[]"),
             itemSize: .fixed(56),
             headerSize: .fixed(28)
@@ -198,7 +199,7 @@ struct GridConfiguration: Hashable {
             collectionViewLayout: layout
         )
         // 注册 cell、header，并设置 dataSource。
-        // 数据源提供的内容对应 LazyVGrid.content。
+        // 数据源提供的内容对应 \(axis == .vertical ? "LazyVGrid" : "LazyHGrid").content。
         """
     }
 }

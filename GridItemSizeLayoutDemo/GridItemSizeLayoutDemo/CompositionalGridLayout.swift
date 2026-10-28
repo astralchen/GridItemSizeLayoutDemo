@@ -6,21 +6,21 @@ enum CompositionalGridLayout {
     static func make(configuration: GridConfiguration) -> UICollectionViewCompositionalLayout {
         if configuration.axis == .vertical {
             return UIKitLazyVGridLayout(
-                columns: configuration.uiKitColumns,
+                columns: configuration.uiKitTracks,
                 alignment: configuration.alignment,
-                spacing: configuration.rowSpacing,
+                spacing: configuration.spacing,
                 pinnedViews: configuration.pinHeaders ? [.sectionHeaders] : [],
-                itemSize: .fixed(GridConfiguration.rowHeight),
-                headerSize: .fixed(GridConfiguration.headerHeight)
+                itemSize: .fixed(GridConfiguration.itemExtent),
+                headerSize: .fixed(GridConfiguration.headerExtent)
             )
         } else {
             return UIKitLazyHGridLayout(
-                rows: configuration.uiKitColumns,
+                rows: configuration.uiKitTracks,
                 alignment: configuration.verticalAlignment,
-                spacing: configuration.rowSpacing,
+                spacing: configuration.spacing,
                 pinnedViews: configuration.pinHeaders ? [.sectionHeaders] : [],
-                itemSize: .fixed(GridConfiguration.rowHeight),
-                headerSize: .fixed(GridConfiguration.headerHeight)
+                itemSize: .fixed(GridConfiguration.itemExtent),
+                headerSize: .fixed(GridConfiguration.headerExtent)
             )
         }
     }
@@ -63,14 +63,14 @@ extension CompositionalGridLayout {
                     section = UIKitLazyVGridLayout.makeSection(
                         columns: tracks, alignment: index == 0 ? .leading : index == 3 ? .trailing : .center,
                         spacing: spacing, pinnedViews: style.pinnedViews, itemSize: .fixed(itemExtent),
-                        headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
+                        headerSize: .fixed(style.headerExtent), footerSize: .fixed(style.footerExtent),
                         contentInsets: insets, environment: environment
                     )
                 } else {
                     section = UIKitLazyHGridLayout.makeSection(
                         rows: tracks, alignment: index == 0 ? .top : index == 3 ? .bottom : .center,
                         spacing: spacing, pinnedViews: style.pinnedViews, itemSize: .fixed(itemExtent),
-                        headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
+                        headerSize: .fixed(style.headerExtent), footerSize: .fixed(style.footerExtent),
                         contentInsets: insets, environment: environment
                     )
                 }
@@ -89,7 +89,7 @@ extension CompositionalGridLayout {
                 section.interGroupSpacing = 12
                 section.contentInsets = insets
                 func boundary(_ header: Bool) -> NSCollectionLayoutBoundarySupplementaryItem {
-                    let extent = header ? style.headerHeight : style.footerHeight
+                    let extent = header ? style.headerExtent : style.footerExtent
                     let boundary = NSCollectionLayoutBoundarySupplementaryItem(
                         layoutSize: NSCollectionLayoutSize(
                             widthDimension: vertical ? .fractionalWidth(1) : .absolute(extent),
@@ -121,25 +121,25 @@ extension CompositionalGridLayout {
 struct SectionDemoStyle {
     let title: String
     let itemCount: Int
-    let headerHeight: CGFloat
-    let footerHeight: CGFloat
+    let headerExtent: CGFloat
+    let footerExtent: CGFloat
     let pinnedViews: UIKitPinnedScrollableViews
     let color: UIColor
 
     static let all: [SectionDemoStyle] = [
-        .init(title: "fixed · 3 列 × 72", itemCount: 9, headerHeight: 36, footerHeight: 28,
+        .init(title: "fixed · 3 列 × 72", itemCount: 9, headerExtent: 36, footerExtent: 28,
               pinnedViews: [], color: .systemBlue),
-        .init(title: "flexible · 2 列均分", itemCount: 16, headerHeight: 44, footerHeight: 32,
+        .init(title: "flexible · 2 列均分", itemCount: 16, headerExtent: 44, footerExtent: 32,
               pinnedViews: [.sectionHeaders], color: .systemTeal),
-        .init(title: "adaptive · minimum 85", itemCount: 24, headerHeight: 36, footerHeight: 36,
+        .init(title: "adaptive · minimum 85", itemCount: 24, headerExtent: 36, footerExtent: 36,
               pinnedViews: [.sectionFooters], color: .systemOrange),
-        .init(title: "混排 · fixed + flexible + adaptive", itemCount: 32, headerHeight: 44, footerHeight: 32,
+        .init(title: "混排 · fixed + flexible + adaptive", itemCount: 32, headerExtent: 44, footerExtent: 32,
               pinnedViews: [.sectionHeaders, .sectionFooters], color: .systemPurple),
-        .init(title: "UIKit 原生横向轮播", itemCount: 5, headerHeight: 36, footerHeight: 28,
+        .init(title: "UIKit 原生横向轮播", itemCount: 5, headerExtent: 36, footerExtent: 28,
               pinnedViews: [], color: .systemPink)
     ]
 
-    /// 沿用字段名存储主轴尺寸：纵向表示高度，横向表示宽度。
+    /// 按滚动方向提供样式；extent 表示主轴长度，纵向为高度，横向为宽度。
     static func styles(for axis: GridAxis) -> [SectionDemoStyle] {
         guard axis == .horizontal else { return all }
         let titles = ["fixed · 3 行 × 72", "flexible · 2 行均分", "adaptive · minimum 85",
@@ -149,7 +149,7 @@ struct SectionDemoStyle {
         let footers: [CGFloat] = [52, 60, 64, 56, 52]
         return all.enumerated().map { index, style in
             SectionDemoStyle(title: titles[index], itemCount: counts[index],
-                             headerHeight: headers[index], footerHeight: footers[index],
+                             headerExtent: headers[index], footerExtent: footers[index],
                              pinnedViews: style.pinnedViews, color: style.color)
         }
     }

@@ -7,15 +7,15 @@ struct GridAPIReference: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("对应 UIKit API · 本地 SPM") { code("import UIKitGridLayouts\n\n" + configuration.uiKitCode) }
                 Section("LazyVGrid / LazyHGrid 参数") {
                     mapping("columns / rows", "UIKitGridItem 与 GridItem 一样使用 fixed、flexible、adaptive。VGrid 的 columns 决定列宽，HGrid 的 rows 决定行高。")
-                    mapping("alignment", "VGrid：leading / center / trailing。HGrid：top / center / bottom。控制整组轨道在容器中的对齐，不改变 cell 内文本对齐。")
+                    mapping("alignment", "VGrid：UIKitGridHorizontalAlignment（leading / center / trailing）。HGrid：UIKitGridVerticalAlignment（top / center / bottom）。两者默认 center。控制整组轨道在容器中的对齐，不改变 cell 内文本对齐。")
                     mapping("spacing", "滚动方向相邻行或列的间距 → section.interGroupSpacing。UIKitGridItem.spacing 是交叉方向的轨道间距。")
                     mapping("pinnedViews", "sectionHeaders / sectionFooters → supplementary item 的 pinToVisibleBounds。本页演示分组标题的吸附开关。")
                     mapping("content", "SwiftUI 的 ForEach + Section，对应 UIKit 数据源的 section、item、cell 与 supplementary view。布局包不接管数据源。")
                 }
                 Section("当前 SwiftUI 写法") { code(configuration.swiftUICode) }
-                Section("对应 UIKit API · 本地 SPM") { code("import UIKitGridLayouts\n\n" + configuration.uiKitCode) }
                 Section("观察方法与范围") {
                     Text("切换 260 / 340 / 自适应尺寸：fixed 保持尺寸；flexible 保持轨道数；adaptive 改变轨道数。两个框架使用相同输入，分别独立计算布局。")
                     Text("VGrid 比较列宽，HGrid 比较行高。两边独立滚动；规则改变时回到起点。开启上限后观察空白与对齐。")

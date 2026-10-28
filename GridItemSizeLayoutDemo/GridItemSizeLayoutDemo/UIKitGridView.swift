@@ -272,14 +272,14 @@ private final class SectionBoundaryView: UICollectionReusableView {
         if axis == .horizontal {
             let shortTitle = ["fixed\n3 行 × 72", "flexible\n2 行均分", "adaptive\n最小 85", "混排", "原生\n纵向轮播"][section]
             title = isHeader
-                ? "\(section + 1)\n\(shortTitle)\n\n页眉\n\(Int(style.headerHeight)) pt\n\(pinned ? "起始吸附" : "不吸附")"
-                : "\(style.itemCount) 项\n\n页脚\n\(Int(style.footerHeight)) pt\n\(pinned ? "结束吸附" : "不吸附")"
+                ? "\(section + 1)\n\(shortTitle)\n\n页眉\n\(Int(style.headerExtent)) pt\n\(pinned ? "起始吸附" : "不吸附")"
+                : "\(style.itemCount) 项\n\n页脚\n\(Int(style.footerExtent)) pt\n\(pinned ? "结束吸附" : "不吸附")"
             label.numberOfLines = 0
             label.textAlignment = .center
         } else {
             title = isHeader
                 ? "\(section + 1) · \(style.title) · \(pinned ? "页眉吸顶" : "普通页眉")"
-                : "\(style.itemCount) 项 · \(Int(style.footerHeight)) pt 页脚 · \(pinned ? "吸底" : "不吸附")"
+                : "\(style.itemCount) 项 · \(Int(style.footerExtent)) pt 页脚 · \(pinned ? "吸底" : "不吸附")"
             label.numberOfLines = 2
             label.textAlignment = .natural
         }

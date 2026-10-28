@@ -24,6 +24,7 @@ struct ContentView: View {
             initial.axis = .horizontal
         }
         _configuration = State(initialValue: initial)
+        _showingAPI = State(initialValue: arguments.contains("--grid-api"))
         _showingSections = State(initialValue: arguments.contains("--grid-sections"))
         _showingSizing = State(initialValue: arguments.contains("--grid-sizing"))
         #endif
@@ -140,9 +141,9 @@ struct ContentView: View {
             .controlSize(.mini)
 
             HStack {
-                Text("\(configuration.axis == .vertical ? "行" : "列")间距 \(Int(configuration.rowSpacing))")
+                Text("\(configuration.axis == .vertical ? "行" : "列")间距 \(Int(configuration.spacing))")
                     .font(.caption.monospacedDigit())
-                Slider(value: $configuration.rowSpacing, in: 0...24, step: 4)
+                Slider(value: $configuration.spacing, in: 0...24, step: 4)
                     .accessibilityLabel("主轴间距")
                     .accessibilityIdentifier("line.spacing")
             }

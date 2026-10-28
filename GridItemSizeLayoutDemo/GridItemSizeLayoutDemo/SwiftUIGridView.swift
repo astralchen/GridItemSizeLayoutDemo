@@ -8,20 +8,20 @@ struct SwiftUIGridView: View {
             // 原生 SwiftUI 自行布局，不读取 UIKit 包的计算结果。
             if configuration.axis == .vertical {
                 LazyVGrid(
-                    columns: configuration.columns,
+                    columns: configuration.swiftUITracks,
                     alignment: configuration.alignment.swiftUI,
-                    spacing: configuration.rowSpacing,
+                    spacing: configuration.spacing,
                     pinnedViews: configuration.pinHeaders ? [.sectionHeaders] : []
                 ) { sections }
-                .padding(.bottom, configuration.rowSpacing)
+                .padding(.bottom, configuration.spacing)
             } else {
                 LazyHGrid(
-                    rows: configuration.columns,
+                    rows: configuration.swiftUITracks,
                     alignment: configuration.swiftUIVerticalAlignment,
-                    spacing: configuration.rowSpacing,
+                    spacing: configuration.spacing,
                     pinnedViews: configuration.pinHeaders ? [.sectionHeaders] : []
                 ) { sections }
-                .padding(.trailing, configuration.rowSpacing)
+                .padding(.trailing, configuration.spacing)
             }
         }
         .scrollIndicators(.hidden)
@@ -52,8 +52,8 @@ struct SwiftUIGridView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .padding(.leading, 8)
             .frame(
-                width: configuration.axis == .horizontal ? GridConfiguration.headerHeight : nil,
-                height: configuration.axis == .vertical ? GridConfiguration.headerHeight : nil
+                width: configuration.axis == .horizontal ? GridConfiguration.headerExtent : nil,
+                height: configuration.axis == .vertical ? GridConfiguration.headerExtent : nil
             )
             .background(Color(uiColor: .secondarySystemGroupedBackground))
             .accessibilityIdentifier("swiftui.header.\(section)")
@@ -86,8 +86,8 @@ private struct SwiftUIGridCell: View {
             .accessibilityIdentifier("swiftui.cell.\(index)")
         }
         .frame(
-            width: axis == .horizontal ? GridConfiguration.rowHeight : nil,
-            height: axis == .vertical ? GridConfiguration.rowHeight : nil
+            width: axis == .horizontal ? GridConfiguration.itemExtent : nil,
+            height: axis == .vertical ? GridConfiguration.itemExtent : nil
         )
     }
 }
