@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var showingAPI = false
     @State private var showingSections = false
     @State private var showingSizing = false
+    @State private var showingKinds = false
 
     init() {
         #if DEBUG
@@ -27,6 +28,7 @@ struct ContentView: View {
         _showingAPI = State(initialValue: arguments.contains("--grid-api"))
         _showingSections = State(initialValue: arguments.contains("--grid-sections"))
         _showingSizing = State(initialValue: arguments.contains("--grid-sizing"))
+        _showingKinds = State(initialValue: arguments.contains("--grid-kinds"))
         #endif
     }
 
@@ -36,6 +38,9 @@ struct ContentView: View {
                 let sideBySide = configuration.axis == .horizontal || geometry.size.width >= 760
                 VStack(spacing: 10) {
                     controls
+                    Button("自定义 Header / Footer Kind") { showingKinds = true }
+                        .font(.caption)
+                        .accessibilityIdentifier("show.kinds")
 
                     Text(configuration.explanation)
                         .font(.footnote)
@@ -85,6 +90,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showingSizing) {
                 MainAxisSizingDemo()
+            }
+            .sheet(isPresented: $showingKinds) {
+                SupplementaryKindsDemo(initialAxis: configuration.axis)
             }
             .sheet(isPresented: $showingAPI) {
                 GridAPIReference(configuration: configuration)

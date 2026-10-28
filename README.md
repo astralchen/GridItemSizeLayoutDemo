@@ -2,7 +2,45 @@
 
 使用同一组参数，对比 SwiftUI `LazyVGrid` / `LazyHGrid` 和 UIKit compositional layout。
 
-布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。当前示例的 submodule 固定到 [UIKitGridLayouts 0.4.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.4.0) 标签对应提交 `89aa339cc5651147c3c6265c0c931dd701bb45a7`。该版本包含不兼容的 API 命名调整：`UIKitGridAlignment` 改为 `UIKitGridHorizontalAlignment`，迁移方式见下文。原有主轴尺寸与多分区示例仍保留。
+布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。当前示例的 submodule 固定到 [UIKitGridLayouts 0.5.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.5.0) 标签对应提交 `5a5bd7440677b31088a91bca93b227cbbacf8097`。本版本将页眉页脚改为显式 kind 与尺寸配置，属于不兼容 API 调整。原有主轴尺寸与多分区示例已同步迁移。
+
+## 显式边界配置（0.5.0，不兼容调整）
+
+`UIKitLazyVGridLayout` / `UIKitLazyHGridLayout` 的初始化器与 `makeSection` 统一接受 `header: UIKitGridBoundaryItem? = nil`、`footer: UIKitGridBoundaryItem? = nil`。配置将必填的 `elementKind` 与 `size` 绑定，库不再内置标准 header/footer kind，也不保留旧参数重载。
+
+```swift
+let titleKind = "app.section.title"
+let summaryKind = "app.section.summary"
+let layout = UIKitLazyVGridLayout(
+    columns: [UIKitGridItem(.flexible())],
+    pinnedViews: [.sectionHeaders],
+    header: .init(elementKind: titleKind, size: .estimated(44)),
+    footer: .init(elementKind: summaryKind, size: .fixed(28))
+)
+// 注册与数据源的 viewForSupplementaryElementOfKind 使用相同的 kind。
+collectionView.register(UICollectionReusableView.self,
+    forSupplementaryViewOfKind: titleKind, withReuseIdentifier: "title")
+collectionView.register(UICollectionReusableView.self,
+    forSupplementaryViewOfKind: summaryKind, withReuseIdentifier: "summary")
+```
+
+示意代码中的 `collectionView` 由宿主创建并使用 `layout`；数据源仍需按收到的 kind 返回相应的复用视图。需要自适应尺寸时，为实际视图提供完整约束或 fitting 实现。
+
+- `header` / `footer` 默认 `nil`，即不创建辅助视图；仅设置 `pinnedViews` 不会创建视图。
+- `elementKind` 必须为非空字符串，和 reuse identifier 分开配置。可显式传入 `UICollectionView.elementKindSectionHeader` / `UICollectionView.elementKindSectionFooter`，也可使用业务名称。
+- 位置与吸附由参数角色决定：纵向 header/footer 位于 top/bottom，横向位于 leading/trailing；`sectionHeaders` / `sectionFooters` 对应这两个角色，不检查字符串是否等于标准名称。
+- `makeSection` 可按 sectionIndex 使用不同配置。需要任意数量或额外位置的辅助视图时，可继续配置返回分区的 `boundarySupplementaryItems`。
+- 库最低 iOS 15，示例最低 iOS 16。size 支持 fixed、estimated、aspectRatio；uniform 仍需 iOS 17+，用于边界视图时按 estimated 独立测量。
+
+**从 0.4.0 迁移：** `headerSize: .fixed(32)` 改为 `header: .init(elementKind: 你的页眉Kind, size: .fixed(32))`；`footerSize` 同理改为 `footer` 配置。旧的 nil 或省略参数改为 `header: nil` / `footer: nil` 或省略；原有 `pinnedViews` 保持不变。所有显式使用旧参数的调用都必须迁移，注册与数据源的 kind 同步匹配。
+
+首页点击“自定义 Header / Footer Kind”，可切换纵向／横向及初始化器／makeSection。色块显示数据源实际收到的 `demo.header` 和 `demo.footer`。Debug 启动参数 `--grid-kinds` 进入该页，横向另加 `--grid-axis horizontal`。
+
+以下为 2026-10-28 在 **iPhone 17 Pro / iOS 26.5 模拟器**本次真实运行截图：初始化器、单条 64 pt 轨道、3 个 48 pt 单元格、header/footer 主轴尺寸均为 72 pt、默认间距 8 pt、不吸附。
+
+| 纵向：自定义 kind | 横向：自定义 kind |
+| :---: | :---: |
+| <img src="Documentation/Screenshots/custom-kinds-vertical.png" alt="纵向显式边界配置及真实 kind 回调" width="320"> | <img src="Documentation/Screenshots/custom-kinds-horizontal.png" alt="横向显式边界配置及真实 kind 回调" width="320"> |
 
 ## SwiftUI 风格的参数命名（0.4.0）
 
@@ -31,7 +69,7 @@ let horizontal = UIKitLazyHGridLayout(
 
 **从 0.3.x 迁移到 0.4.0：** 将显式类型声明、extension 和类型别名中的 `UIKitGridAlignment` 改为 `UIKitGridHorizontalAlignment`。旧类型名已移除，不提供兼容 typealias。`alignment: .center` 等可推断类型的调用无需修改；`rows:`、`columns:`、`spacing:`、`pinnedViews:` 以及主轴尺寸参数保持不变。该改动同时适用于初始化器和分区工厂，布局算法与默认值保持不变。
 
-示例首页切换 VGrid / HGrid，再点击“参数 / 代码”，即可查看当前配置与完整对齐类型。以下是 2026-10-28 在 **iPhone 17 Pro / iOS 26.5 模拟器**实际运行更新后 App 的截图：fixed、3 条 72 pt 轨道、居中、主轴及轨道间距 12 pt、页眉开启；Debug 参数 `--grid-api` 直接打开代码页，横向另加 `--grid-axis horizontal`。
+示例首页切换 VGrid / HGrid，再点击“参数 / 代码”，即可查看当前配置与完整对齐类型。以下代码页截图已同步更新为显式 header 配置，于 2026-10-28 在 **iPhone 17 Pro / iOS 26.5 模拟器**实际运行：fixed、3 条 72 pt 轨道、居中、主轴及轨道间距 12 pt、页眉开启；Debug 参数 `--grid-api` 直接打开代码页，横向另加 `--grid-axis horizontal`。
 
 | VGrid：columns 与水平对齐类型 | HGrid：rows 与垂直对齐类型 |
 | :---: | :---: |
@@ -97,8 +135,8 @@ let layout = UICollectionViewCompositionalLayout { sectionIndex, environment in
         spacing: 12,
         pinnedViews: style.pinnedViews,
         itemSize: .fixed(56),
-        headerSize: .fixed(style.headerExtent),
-        footerSize: .fixed(style.footerExtent),
+        header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .fixed(style.headerExtent)),
+        footer: .init(elementKind: UICollectionView.elementKindSectionFooter, size: .fixed(style.footerExtent)),
         contentInsets: .init(top: 8, leading: 16, bottom: 12, trailing: 16),
         environment: environment
     )
@@ -145,7 +183,7 @@ return view
 - Decoration 由 layout 管理，不进入数据源的 supplementary 回调，也不增加数据源的 item 数量。
 - `pinToVisibleBounds` 相对集合视图的可见边界生效，并受所属分区范围约束；页脚吸底不是固定在整个屏幕底部的工具栏。
 - 原生轮播 section 直接创建自己的 boundary supplementary items；它与网格 section 共用注册和数据源机制。
-- 将某个 headerSize/footerSize 设为 nil 可省略对应布局项；不要对未注册的 kind 创建布局项。
+- 将某个 header/footer 设为 nil 可省略对应布局项；不要对未注册的 kind 创建布局项。
 
 
 ### 横向多分区
@@ -167,15 +205,15 @@ configuration.interSectionSpacing = 16
 
 let layout = UICollectionViewCompositionalLayout(
     sectionProvider: { sectionIndex, environment in
-        // 不同分区可使用不同 rows、itemSize、headerSize 和 footerSize。
+        // 不同分区可使用不同 rows、itemSize、header 和 footer。
         let section = UIKitLazyHGridLayout.makeSection(
             rows: [UIKitGridItem(.fixed(60)), UIKitGridItem(.flexible(minimum: 70))],
             alignment: .top,
             spacing: 12,
             pinnedViews: [.sectionHeaders, .sectionFooters],
             itemSize: .fixed(80),       // 列宽
-            headerSize: .fixed(72),    // 页眉宽度
-            footerSize: .fixed(56),    // 页脚宽度
+            header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .fixed(72)),    // 页眉宽度
+            footer: .init(elementKind: UICollectionView.elementKindSectionFooter, size: .fixed(56)),    // 页脚宽度
             contentInsets: .init(top: 16, leading: 8, bottom: 16, trailing: 12),
             environment: environment
         )
@@ -229,7 +267,7 @@ Debug 构建可在 Xcode 的 Run → Arguments 中添加 `--grid-mode flexible -
 
 上图为 iPhone 17 Pro / iOS 26.5 的实际运行截图。示例导航栏“主轴尺寸”提供两个方向和四种策略切换（同组统一仅 iOS 17+）。
 
-两个方向统一使用 `itemSize: UIKitGridSize = .fixed(56)`。`headerSize`、`footerSize` 使用同一类型，默认为 `nil`（不创建辅助视图）。初始化器与 `makeSection` 使用相同参数。
+两个方向统一使用 `itemSize: UIKitGridSize = .fixed(56)`。`header`、`footer` 使用 `UIKitGridBoundaryItem?`，默认为 `nil`（不创建辅助视图）；其 `size` 使用同一套 `UIKitGridSize` 策略，`elementKind` 必须显式指定。初始化器与 `makeSection` 使用相同参数。
 
 | 策略 | VGrid | HGrid |
 | --- | --- | --- |
@@ -244,14 +282,14 @@ Debug 构建可在 Xcode 的 Run → Arguments 中添加 `--grid-mode flexible -
 let vertical = UIKitLazyVGridLayout(
     columns: [UIKitGridItem(.adaptive(minimum: 120))],
     itemSize: .estimated(80),
-    headerSize: .estimated(44),
-    footerSize: .fixed(28)
+    header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .estimated(44)),
+    footer: .init(elementKind: UICollectionView.elementKindSectionFooter, size: .fixed(28))
 )
 
 let horizontal = UIKitLazyHGridLayout(
     rows: [UIKitGridItem(.fixed(80)), UIKitGridItem(.fixed(100))],
     itemSize: .aspectRatio(1.5),
-    headerSize: .estimated(60)
+    header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .estimated(60))
 )
 ```
 
@@ -310,6 +348,8 @@ override func preferredLayoutAttributesFitting(
 
 ### 从 0.2.x 迁移到 0.3.0
 
+以下保留历史迁移记录；升级到 0.5.0 接口时，还需按上文将 headerSize/footerSize 迁移为 header/footer 配置。
+
 本次直接调整 API，不保留旧参数名重载：
 
 | 旧参数 | 新参数 |
@@ -334,7 +374,7 @@ let vertical = UIKitLazyVGridLayout(
     spacing: 12,
     pinnedViews: [.sectionHeaders],
     itemSize: .fixed(56),
-    headerSize: .fixed(28)
+    header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .fixed(28))
 )
 
 // 对应 LazyHGrid(rows:alignment:spacing:pinnedViews:content:)
@@ -347,7 +387,7 @@ let horizontal = UIKitLazyHGridLayout(
     spacing: 12,
     pinnedViews: [.sectionHeaders],
     itemSize: .fixed(56),
-    headerSize: .fixed(28)
+    header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .fixed(28))
 )
 
 let collectionView = UICollectionView(frame: .zero, collectionViewLayout: vertical)
@@ -392,7 +432,7 @@ let layout = UIKitLazyVGridLayout(
 - 两种布局都接受 `contentInsetsReference`，默认为 `.safeArea`。容器有效尺寸已应用其 inset，builder 不再减 `safeAreaInsets`。若调用方已经安排好内容区域，可显式传 `.none`；滚动视图的 `contentInsetAdjustmentBehavior` 仍由宿主决定。两种设置分别负责布局参考边界和滚动内容的自动 inset，不要把它们当成同一开关。
 - `spacing: nil` 在包内明确为 **8 pt**。SwiftUI 的 nil 是系统默认值，不保证与这里相同。
 - 两个方向统一通过 `itemSize` 配置固定尺寸、内容自适应尺寸或宽高比。
-- headerSize / footerSize 默认为 nil，不创建对应 supplementary item。传入尺寸策略时，数据源必须提供相应标准 element kind 的视图；`pinnedViews` 只控制吸附，不自动创建内容。
+- header / footer 默认为 nil，不创建对应 supplementary item。传入配置时，数据源必须提供配置中 elementKind 对应的视图；`pinnedViews` 只控制吸附，不自动创建内容。
 - `sectionHeaders` / `sectionFooters` 可以同时使用。对比页展示 header；多分区页同时展示 header、footer 和独立吸附。
 - 支持混合轨道：先扣除 fixed 和间距，再按顺序分配其余轨道，最后展开 adaptive。不同上下限的混排与 SwiftUI 的提议尺寸、多轮测量行为不承诺逐像素一致。
 - 极窄容器下 fixed / flexible 保持固定值或 minimum，可能溢出；adaptive 的单条轨道允许缩小到容器尺寸。示例对预览边界进行裁剪。
@@ -438,3 +478,9 @@ SwiftUI 风格命名调整验证（2026-10-28）：Xcode 27.1、iPhone 17 Pro / 
 示例内部命名清理验证（2026-10-28）：共享配置采用 `swiftUITracks`、`uiKitTracks`、`spacing`、`trackSpacing` 和主轴 `Extent` 命名，同步调用、测试引用及文档示例。清理后工程构建通过，8 项 App 集成测试全部通过；库源码与公开 API 未因这次内部清理而改变。
 
 0.4.0 发布同步（2026-10-28）：示例 submodule 固定到库 `0.4.0` 标签对应提交 `89aa339`。此次发布仅更新版本文档，库源码、测试、Package.swift 和截图与已验证的 `1aefebf` 一致；示例源码与集成测试通过的命名清理版本一致，沿用上述结果。
+
+## 本次显式边界配置验证（2026-10-28）
+
+Xcode 27.1 / Swift 6.4，iPhone 17 Pro / iOS 26.5：库测试 36/36、示例集成测试 8/8、新增自定义 Kind UI 测试 1/1 通过。UI 测试覆盖首页入口、方向切换、初始化器 / makeSection 切换和真实辅助视图文本；构建启动及四张更新后的运行截图已检查。
+
+库源码与四个公开入口的客户端通过 Swift 6 / iOS 15 Simulator 目标编译检查；没有 iOS 15 运行时、真机或其余完整 UI 套件验收。详见 [库的验证记录](Packages/UIKitGridLayouts/RELEASING.md)。示例 submodule 已固定到 `0.5.0` 对应提交 `5a5bd7440677b31088a91bca93b227cbbacf8097`，与以上示例使用的 API 一致；本次发布整理仅调整版本文档和 Git 引用，沿用上述已完成的验证结果。

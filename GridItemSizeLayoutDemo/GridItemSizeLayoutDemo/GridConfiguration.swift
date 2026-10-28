@@ -191,7 +191,7 @@ struct GridConfiguration: Hashable {
             spacing: \(Int(spacing)),
             pinnedViews: \(pinHeaders ? "[.sectionHeaders]" : "[]"),
             itemSize: .fixed(56),
-            headerSize: .fixed(28)
+            header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .fixed(28))
         )
 
         let collectionView = UICollectionView(

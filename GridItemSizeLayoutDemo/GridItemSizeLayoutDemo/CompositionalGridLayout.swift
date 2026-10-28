@@ -11,7 +11,7 @@ enum CompositionalGridLayout {
                 spacing: configuration.spacing,
                 pinnedViews: configuration.pinHeaders ? [.sectionHeaders] : [],
                 itemSize: .fixed(GridConfiguration.itemExtent),
-                headerSize: .fixed(GridConfiguration.headerExtent)
+                header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .fixed(GridConfiguration.headerExtent))
             )
         } else {
             return UIKitLazyHGridLayout(
@@ -20,7 +20,7 @@ enum CompositionalGridLayout {
                 spacing: configuration.spacing,
                 pinnedViews: configuration.pinHeaders ? [.sectionHeaders] : [],
                 itemSize: .fixed(GridConfiguration.itemExtent),
-                headerSize: .fixed(GridConfiguration.headerExtent)
+                header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .fixed(GridConfiguration.headerExtent))
             )
         }
     }
@@ -63,14 +63,14 @@ extension CompositionalGridLayout {
                     section = UIKitLazyVGridLayout.makeSection(
                         columns: tracks, alignment: index == 0 ? .leading : index == 3 ? .trailing : .center,
                         spacing: spacing, pinnedViews: style.pinnedViews, itemSize: .fixed(itemExtent),
-                        headerSize: .fixed(style.headerExtent), footerSize: .fixed(style.footerExtent),
+                        header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .fixed(style.headerExtent)), footer: .init(elementKind: UICollectionView.elementKindSectionFooter, size: .fixed(style.footerExtent)),
                         contentInsets: insets, environment: environment
                     )
                 } else {
                     section = UIKitLazyHGridLayout.makeSection(
                         rows: tracks, alignment: index == 0 ? .top : index == 3 ? .bottom : .center,
                         spacing: spacing, pinnedViews: style.pinnedViews, itemSize: .fixed(itemExtent),
-                        headerSize: .fixed(style.headerExtent), footerSize: .fixed(style.footerExtent),
+                        header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .fixed(style.headerExtent)), footer: .init(elementKind: UICollectionView.elementKindSectionFooter, size: .fixed(style.footerExtent)),
                         contentInsets: insets, environment: environment
                     )
                 }

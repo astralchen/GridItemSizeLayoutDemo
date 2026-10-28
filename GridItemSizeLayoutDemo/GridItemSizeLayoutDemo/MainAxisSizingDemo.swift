@@ -112,13 +112,13 @@ final class MainAxisSizingController: UICollectionViewController {
         if horizontal {
             return UIKitLazyHGridLayout(
                 rows: [UIKitGridItem(.fixed(70)), UIKitGridItem(.fixed(90))], alignment: .top,
-                spacing: 12, itemSize: mode.size, headerSize: .estimated(44), footerSize: .estimated(44)
+                spacing: 12, itemSize: mode.size, header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .estimated(44)), footer: .init(elementKind: UICollectionView.elementKindSectionFooter, size: .estimated(44))
             )
         }
         return UIKitLazyVGridLayout(
             columns: [UIKitGridItem(.flexible()), UIKitGridItem(.flexible())], alignment: .leading,
             spacing: 12, pinnedViews: [.sectionHeaders], itemSize: mode.size,
-            headerSize: .estimated(44), footerSize: .estimated(44)
+            header: .init(elementKind: UICollectionView.elementKindSectionHeader, size: .estimated(44)), footer: .init(elementKind: UICollectionView.elementKindSectionFooter, size: .estimated(44))
         )
     }
     override func viewDidLoad() {

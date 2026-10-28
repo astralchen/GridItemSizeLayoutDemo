@@ -2,6 +2,25 @@ import XCTest
 
 @MainActor
 final class GridItemSizeLayoutDemoUITests: XCTestCase {
+    func testCustomKindsInBothDirectionsAndEntrypoints() {
+        let app = XCUIApplication()
+        app.launch()
+        app.buttons["show.kinds"].tap()
+        for axis in ["纵向", "横向"] {
+            app.buttons[axis].tap()
+            for factory in [false, true] {
+                setSwitch(app, id: "kinds.factory", enabled: factory)
+                for kind in ["demo.header", "demo.footer"] {
+                    let boundary = element(app, kind)
+                    XCTAssertTrue(boundary.waitForExistence(timeout: 5))
+                    XCTAssertTrue(boundary.isHittable)
+                    XCTAssertEqual(boundary.label, kind)
+                }
+                capture(app, name: "custom-kinds-\(axis)-factory-\(factory)")
+            }
+        }
+    }
+
     func testMixedSizingAndWrappingMatchSwiftUI() {
         let app = XCUIApplication()
         app.launch()
