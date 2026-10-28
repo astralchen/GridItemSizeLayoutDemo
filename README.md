@@ -2,7 +2,7 @@
 
 使用同一组参数，对比 SwiftUI `LazyVGrid` / `LazyHGrid` 和 UIKit compositional layout。
 
-布局库已拆为独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)。Demo 通过 Git submodule 固定库的提交，仍使用本地 Swift Package 路径 `../Packages/UIKitGridLayouts`，不需要修改 Xcode 工程引用。
+布局库已拆为独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)。Demo 通过 Git submodule 固定到 [UIKitGridLayouts 0.1.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.1.0)，仍使用本地 Swift Package 路径 `../Packages/UIKitGridLayouts`，不需要修改 Xcode 工程引用。
 
 ## 运行截图
 
@@ -19,7 +19,7 @@
 
 ## 运行
 
-1. 首次获取示例后，先在仓库根目录运行 `git submodule update --init --recursive` 下载布局库。克隆示例时也可使用 `git clone --recurse-submodules <示例仓库地址>`。
+1. 首次获取示例后，先在仓库根目录运行 `git submodule update --init --recursive` 下载布局库。克隆示例时也可使用 `git clone --recurse-submodules https://github.com/astralchen/GridItemSizeLayoutDemo.git`。
 2. 用 Xcode 打开 `GridItemSizeLayoutDemo/GridItemSizeLayoutDemo.xcodeproj`。
 3. 选择 `GridItemSizeLayoutDemo` scheme 和 iPhone / iPad 模拟器，运行。
 4. 对比 App 最低 iOS 16；独立库最低 iOS 15，使用 Swift tools 6.3 和 Swift 6 language mode。模拟器无需配置开发团队，真机运行需要自行选择签名团队。
