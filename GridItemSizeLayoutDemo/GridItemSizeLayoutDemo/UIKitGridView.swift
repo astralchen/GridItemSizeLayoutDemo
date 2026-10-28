@@ -144,10 +144,71 @@ private final class GridHeader: UICollectionReusableView {
 
     required init?(coder: NSCoder) { fatalError("Use init(frame:)") }
 
-    func configure(section: Int, axis: GridAxis) {
-        let title = axis == .horizontal ? "S\(section + 1)" : "SECTION \(section + 1) · 18 ITEMS"
+    func configure(section: Int, axis: GridAxis, customTitle: String? = nil) {
+        let title = customTitle ?? (axis == .horizontal ? "S\(section + 1)" : "SECTION \(section + 1) · 18 ITEMS")
         label.text = title
         accessibilityLabel = title
         accessibilityIdentifier = "uikit.header.\(section)"
+    }
+}
+
+/// 展示 sectionProvider 按分区索引选择不同布局，与原有 SwiftUI 对比页分别运行。
+struct SectionLayoutsDemo: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Text("每个分区独立设置尺寸、间距和对齐；底部为 UIKit 原生横向轮播。")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding()
+                SectionLayoutsView()
+            }
+            .navigationTitle("独立分区布局")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { Button("完成") { dismiss() } }
+        }
+    }
+}
+
+private struct SectionLayoutsView: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> SectionLayoutsController { SectionLayoutsController() }
+    func updateUIViewController(_ controller: SectionLayoutsController, context: Context) {}
+}
+
+private final class SectionLayoutsController: UICollectionViewController {
+    private let titles = ["1 · fixed：3 列 × 72", "2 · flexible：2 列均分", "3 · adaptive：minimum 85",
+                          "4 · 混排：fixed + flexible + adaptive", "5 · UIKit 原生横向轮播"]
+    private let counts = [6, 4, 8, 8, 5]
+
+    init() { super.init(collectionViewLayout: CompositionalGridLayout.makeSections()) }
+    required init?(coder: NSCoder) { fatalError("Use init()") }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        collectionView.backgroundColor = .systemGroupedBackground
+        collectionView.accessibilityIdentifier = "uikit.sections"
+        collectionView.register(GridCell.self, forCellWithReuseIdentifier: "cell")
+        collectionView.register(GridHeader.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
+                                withReuseIdentifier: "header")
+    }
+
+    override func numberOfSections(in collectionView: UICollectionView) -> Int { titles.count }
+    override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        counts[section]
+    }
+    override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath) as! GridCell
+        cell.configure(index: counts.prefix(indexPath.section).reduce(0, +) + indexPath.item, axis: .vertical)
+        cell.accessibilityIdentifier = "sections.cell.\(indexPath.section).\(indexPath.item)"
+        return cell
+    }
+    override func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String,
+                                 at indexPath: IndexPath) -> UICollectionReusableView {
+        let header = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: "header",
+                                                                     for: indexPath) as! GridHeader
+        header.configure(section: indexPath.section, axis: .vertical, customTitle: titles[indexPath.section])
+        return header
     }
 }

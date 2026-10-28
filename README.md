@@ -2,7 +2,7 @@
 
 使用同一组参数，对比 SwiftUI `LazyVGrid` / `LazyHGrid` 和 UIKit compositional layout。
 
-布局库已拆为独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)。Demo 通过 Git submodule 固定到 [UIKitGridLayouts 0.1.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.1.0)，仍使用本地 Swift Package 路径 `../Packages/UIKitGridLayouts`，不需要修改 Xcode 工程引用。
+布局库已拆为独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)。Demo 通过 Git submodule 固定到 [UIKitGridLayouts 0.2.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.2.0)，仍使用本地 Swift Package 路径 `../Packages/UIKitGridLayouts`，不需要修改 Xcode 工程引用。
 
 ## 运行截图
 
@@ -23,6 +23,19 @@
 2. 用 Xcode 打开 `GridItemSizeLayoutDemo/GridItemSizeLayoutDemo.xcodeproj`。
 3. 选择 `GridItemSizeLayoutDemo` scheme 和 iPhone / iPad 模拟器，运行。
 4. 对比 App 最低 iOS 16；独立库最低 iOS 15，使用 Swift tools 6.3 和 Swift 6 language mode。模拟器无需配置开发团队，真机运行需要自行选择签名团队。
+
+## 多分区布局
+
+导航栏“多分区”入口展示同一集合视图中的五种独立布局：fixed、flexible、adaptive、混排和 UIKit 原生横向轮播。每个分区有独立的尺寸、间距与对齐。
+
+示例通过 `UIKitLazyVGridLayout.makeSection(..., environment:)` 生成分区，并在外层 `sectionProvider` 按索引选择；横向宿主对应 `UIKitLazyHGridLayout.makeSection`。此 API 从 UIKitGridLayouts 0.2.0 起提供。Debug 参数 `--grid-sections` 可直接打开该页面。
+
+
+| 独立 fixed / flexible / adaptive 分区 | 混排分区与原生横向轮播 |
+| :---: | :---: |
+| <img src="Documentation/Screenshots/multi-sections-top.jpg" alt="多分区上半页真实运行截图" width="320"> | <img src="Documentation/Screenshots/multi-sections-bottom.jpg" alt="混排和 UIKit 原生轮播分区真实运行截图" width="320"> |
+
+以上为 iPhone 17 Pro / iOS 26.5 的多分区页面运行截图。
 
 ## 对比页
 
@@ -91,7 +104,7 @@ let layout = UIKitLazyVGridLayout(
 
 `provider` 每次从 `environment.container.effectiveContentSize` 读取有效宽度（VGrid）或高度（HGrid），该尺寸已应用容器 inset。再次手动减去 `safeAreaInsets` 会让布局少算可用空间，可能使 adaptive 少排一列或一行。
 
-宿主仍负责 UICollectionView 的约束和 `contentInsetAdjustmentBehavior`。如果需要额外的 section 内容留白，应单独处理 `section.contentInsets`；不要将业务留白与安全区域合并计算。本版只设置主轴 section 间距，没有交叉轴 section padding。
+宿主仍负责 UICollectionView 的约束和 `contentInsetAdjustmentBehavior`。如果需要额外的 section 内容留白，应单独处理 `section.contentInsets`；不要将业务留白与安全区域合并计算。布局初始化器只设置主轴 section 间距；新增分区工厂的 `contentInsets` 参数支持交叉轴留白，并在轨道计算前扣除。
 
 参考：[contentInsetsReference](https://developer.apple.com/documentation/uikit/uicollectionviewcompositionallayoutconfiguration/contentinsetsreference)、[effectiveContentSize](https://developer.apple.com/documentation/uikit/nscollectionlayoutcontainer/effectivecontentsize)。
 
@@ -142,7 +155,7 @@ GridItemSizeLayoutDemo/
 
 混排边界测试覆盖展开阈值前后、fixed 声明位置、非固定轨道顺序、flexible / adaptive 上限、空间不足和多 adaptive 的不同间距。这些断言固定的是本包的一轮分配约定；UI 测试另外比较原生 SwiftUI 和 UIKit 前 6 个 cell 的尺寸、相对位置及换行，两者不共享尺寸计算结果。
 
-2026-10-28 独立库验证：Xcode MCP 在 iPhone 17 Pro / iOS 26.5 模拟器运行当前 tools 6.3 / iOS 15 配置的 14 个包测试，全部通过。另用 Swift 6.3.3 完成 manifest 解析及 iOS 15 目标编译检查；未完成 iOS 15 运行时验收。
+2026-10-28 独立库验证：Xcode MCP 在 iPhone 17 Pro / iOS 26.5 模拟器运行当前 tools 6.3 / iOS 15 配置的 19 个包测试，全部通过（含 5 项独立分区 API 集成测试）。另用 Swift 6.3.3 完成 manifest 解析及 iOS 15 目标编译检查；未完成 iOS 15 运行时验收。
 
 此前新增 App 输入一致性测试及混合 UI 对比测试已编译，但运行停在模拟器测试宿主启动阶段，取消后未得到断言结果；不能将包测试结果视作完整的 SwiftUI / UIKit UI 一致性验证。
 

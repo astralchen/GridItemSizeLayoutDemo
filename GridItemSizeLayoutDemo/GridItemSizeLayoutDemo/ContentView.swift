@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var configuration = GridConfiguration()
     @State private var previewWidth = PreviewWidth.available
     @State private var showingAPI = false
+    @State private var showingSections = false
 
     init() {
         #if DEBUG
@@ -22,6 +23,7 @@ struct ContentView: View {
             initial.axis = .horizontal
         }
         _configuration = State(initialValue: initial)
+        _showingSections = State(initialValue: arguments.contains("--grid-sections"))
         #endif
     }
 
@@ -62,10 +64,17 @@ struct ContentView: View {
             .navigationTitle("Grid 布局对比")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("多分区") { showingSections = true }
+                        .accessibilityIdentifier("show.sections")
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("参数 / 代码") { showingAPI = true }
                         .accessibilityIdentifier("show.api")
                 }
+            }
+            .sheet(isPresented: $showingSections) {
+                SectionLayoutsDemo()
             }
             .sheet(isPresented: $showingAPI) {
                 GridAPIReference(configuration: configuration)
