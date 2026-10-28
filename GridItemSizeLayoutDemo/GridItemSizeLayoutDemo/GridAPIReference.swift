@@ -20,9 +20,9 @@ struct GridAPIReference: View {
                     Text("切换 260 / 340 / 自适应尺寸：fixed 保持尺寸；flexible 保持轨道数；adaptive 改变轨道数。两个框架使用相同输入，分别独立计算布局。")
                     Text("VGrid 比较列宽，HGrid 比较行高。两边独立滚动；规则改变时回到起点。开启上限后观察空白与对齐。")
                     Text("混合模式依次放置 fixed(70)、flexible(80…140)、adaptive(minimum: 60)，轨道间距 12。上限开关把两种非固定规则的 maximum 都设为 112；adaptive 展开后可能超过 3 条轨道。")
-                    Text("UIKit 使用确定的一轮分配；没有复刻 SwiftUI 的全部提议尺寸、多轮测量或内容自适应尺寸。极窄容器和触及上限后的留白可能出现差异，两边显示各自实际结果。")
+                    Text("UIKit 使用确定的一轮分配；没有复刻 SwiftUI 的全部提议尺寸与多轮测量。极窄容器和触及上限后的留白可能出现差异，两边显示各自实际结果。")
                     Text("UIKit 的 spacing: nil 明确定义为 8 pt。SwiftUI 的 nil 由系统决定，不承诺相等。本例显式传相同间距。")
-                    Text("UIKit 需要额外提供 rowHeight / columnWidth。本例固定为 56 pt。header / footer 默认尺寸为 0；启用后必须由数据源提供对应 supplementary view。")
+                    Text("UIKit 两个方向统一使用 itemSize：fixed、estimated、uniform（iOS 17+ 同组统一）、aspectRatio（宽 ÷ 高）。本对比页使用 .fixed(56)，主轴尺寸页面可切换尺寸策略。headerSize / footerSize 默认 nil；启用后由数据源提供辅助视图。")
                 }
             }
             .navigationTitle("参数对应关系")

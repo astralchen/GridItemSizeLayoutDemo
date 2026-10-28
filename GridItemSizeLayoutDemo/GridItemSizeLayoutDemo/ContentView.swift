@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var previewWidth = PreviewWidth.available
     @State private var showingAPI = false
     @State private var showingSections = false
+    @State private var showingSizing = false
 
     init() {
         #if DEBUG
@@ -24,6 +25,7 @@ struct ContentView: View {
         }
         _configuration = State(initialValue: initial)
         _showingSections = State(initialValue: arguments.contains("--grid-sections"))
+        _showingSizing = State(initialValue: arguments.contains("--grid-sizing"))
         #endif
     }
 
@@ -65,8 +67,12 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("多分区") { showingSections = true }
-                        .accessibilityIdentifier("show.sections")
+                    HStack {
+                        Button("多分区") { showingSections = true }
+                            .accessibilityIdentifier("show.sections")
+                        Button("主轴尺寸") { showingSizing = true }
+                            .accessibilityIdentifier("show.sizing")
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("参数 / 代码") { showingAPI = true }
@@ -75,6 +81,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showingSections) {
                 SectionLayoutsDemo()
+            }
+            .sheet(isPresented: $showingSizing) {
+                MainAxisSizingDemo()
             }
             .sheet(isPresented: $showingAPI) {
                 GridAPIReference(configuration: configuration)

@@ -78,6 +78,60 @@ final class GridItemSizeLayoutDemoTests: XCTestCase {
         XCTAssertGreaterThan(pinnedAfter, pinnedY + 90)
     }
 
+    func testSizingDemoMeasuresRealTextAndSupportsAllModes() throws {
+        for horizontal in [false, true] {
+            let controller = MainAxisSizingController(horizontal: horizontal, mode: .estimated, expanded: false)
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+            window.rootViewController = controller
+            window.isHidden = false
+            defer { window.isHidden = true; window.rootViewController = nil }
+            let collection = try XCTUnwrap(controller.collectionView)
+            func settle() {
+                for _ in 0..<8 {
+                    window.layoutIfNeeded()
+                    collection.setNeedsLayout()
+                    collection.layoutIfNeeded()
+                    RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.01))
+                }
+            }
+            func frame(_ i: Int = 0) throws -> CGRect {
+                try XCTUnwrap(collection.collectionViewLayout.layoutAttributesForItem(at: IndexPath(item: i, section: 0))).frame
+            }
+            func main(_ r: CGRect) -> CGFloat { horizontal ? r.width : r.height }
+            settle()
+            let initial = try frame()
+            controller.update(horizontal: horizontal, mode: .estimated, expanded: true)
+            settle()
+            XCTAssertGreaterThan(main(try frame()), main(initial))
+            controller.update(horizontal: horizontal, mode: .estimated, expanded: false)
+            settle()
+            XCTAssertEqual(main(try frame()), main(initial), accuracy: 1)
+            if #available(iOS 17.0, *) {
+                let expected = try [max(main(frame(0)), main(frame(1))), max(main(frame(2)), main(frame(3)))]
+                controller.update(horizontal: horizontal, mode: .uniform, expanded: false)
+                settle()
+                for i in 0..<4 {
+                    XCTAssertEqual(main(try frame(i)), expected[i / 2], accuracy: 1)
+                }
+                controller.update(horizontal: horizontal, mode: .uniform, expanded: true)
+                settle()
+                XCTAssertEqual(main(try frame(0)), main(try frame(1)), accuracy: 1)
+                XCTAssertGreaterThan(main(try frame(0)), expected[0])
+            } else {
+                XCTAssertFalse(MainAxisSizeMode.availableCases.contains(.uniform))
+            }
+            controller.update(horizontal: horizontal, mode: .fixed, expanded: true)
+            settle()
+            XCTAssertEqual(main(try frame()), 80, accuracy: 0.5)
+            controller.update(horizontal: horizontal, mode: .ratio, expanded: true)
+            settle()
+            for i in 0..<2 {
+                let r = try frame(i)
+                XCTAssertEqual(r.width / r.height, 1.5, accuracy: 0.001)
+            }
+        }
+    }
+
     func testFactoryUsesLocalPackageForBothAxes() {
         var configuration = GridConfiguration()
         XCTAssertTrue(CompositionalGridLayout.make(configuration: configuration) is UIKitLazyVGridLayout)

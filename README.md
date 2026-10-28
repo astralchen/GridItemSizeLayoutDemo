@@ -2,7 +2,7 @@
 
 使用同一组参数，对比 SwiftUI `LazyVGrid` / `LazyHGrid` 和 UIKit compositional layout。
 
-布局库已拆为独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)。Demo 使用 [UIKitGridLayouts 0.2.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.2.0) 的布局 API，Git submodule 固定到后续文档更新提交 [`7dcd8dd`](https://github.com/astralchen/UIKitGridLayouts/commit/7dcd8dd)，该提交仅更新 README 和运行截图，库源码与 0.2.0 一致。示例仍使用本地 Swift Package 路径 `../Packages/UIKitGridLayouts`，不需要修改 Xcode 工程引用。
+布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。开发分支新增统一的主轴尺寸 API（固定、内容自适应、同组统一、宽高比），尚未发布；0.2.0 的调用方需要按下文迁移。
 
 ## 运行截图
 
@@ -23,6 +23,10 @@
 2. 用 Xcode 打开 `GridItemSizeLayoutDemo/GridItemSizeLayoutDemo.xcodeproj`。
 3. 选择 `GridItemSizeLayoutDemo` scheme 和 iPhone / iPad 模拟器，运行。
 4. 对比 App 最低 iOS 16；独立库最低 iOS 15，使用 Swift tools 6.3 和 Swift 6 language mode。模拟器无需配置开发团队，真机运行需要自行选择签名团队。
+
+## 主轴尺寸示例
+
+导航栏“主轴尺寸”打开独立页面，可切换纵向/横向与固定/内容自适应/同组统一/宽高比。打开“增加内容”观察 estimated 重新测量；fixed 与 aspectRatio 保持各自的尺寸规则。页眉和页脚也使用 estimated。Debug 参数 `--grid-sizing` 可直接打开该页面；添加 `--grid-sizing-mode uniform` 可在 iOS 17+ 直接选择同组统一，`--grid-axis horizontal` 选择横向。
 
 ## 多分区布局
 
@@ -59,9 +63,9 @@ let layout = UICollectionViewCompositionalLayout { sectionIndex, environment in
         columns: [UIKitGridItem(.adaptive(minimum: 85), spacing: 8)],
         spacing: 12,
         pinnedViews: style.pinnedViews,
-        rowHeight: 56,
-        headerHeight: style.headerHeight,
-        footerHeight: style.footerHeight,
+        itemSize: .fixed(56),
+        headerSize: .fixed(style.headerHeight),
+        footerSize: .fixed(style.footerHeight),
         contentInsets: .init(top: 8, leading: 16, bottom: 12, trailing: 16),
         environment: environment
     )
@@ -108,7 +112,7 @@ return view
 - Decoration 由 layout 管理，不进入数据源的 supplementary 回调，也不增加数据源的 item 数量。
 - `pinToVisibleBounds` 相对集合视图的可见边界生效，并受所属分区范围约束；页脚吸底不是固定在整个屏幕底部的工具栏。
 - 原生轮播 section 直接创建自己的 boundary supplementary items；它与网格 section 共用注册和数据源机制。
-- 将某个 header/footer 尺寸设为 0 可省略对应布局项；不要对未注册的 kind 创建布局项。
+- 将某个 headerSize/footerSize 设为 nil 可省略对应布局项；不要对未注册的 kind 创建布局项。
 
 
 ## 对比页
@@ -130,6 +134,104 @@ Debug 构建可在 Xcode 的 Run → Arguments 中添加 `--grid-mode flexible -
 
 每个 cell 显示实际测得的列宽或行高。SwiftUI 使用原生 GridItem，不读取 UIKit 包的尺寸计算结果。
 
+## 主轴尺寸：固定、内容自适应、同组统一、宽高比
+
+<img src="Documentation/Screenshots/main-axis-estimated.jpg" alt="纵向内容自适应：实际多行文字决定 cell 高度" width="320">
+
+上图为 iPhone 17 Pro / iOS 26.5 的实际运行截图。示例导航栏“主轴尺寸”提供两个方向和四种策略切换（同组统一仅 iOS 17+）。
+
+两个方向统一使用 `itemSize: UIKitGridSize = .fixed(56)`。`headerSize`、`footerSize` 使用同一类型，默认为 `nil`（不创建辅助视图）。初始化器与 `makeSection` 使用相同参数。
+
+| 策略 | VGrid | HGrid |
+| --- | --- | --- |
+| `.fixed(56)` | 高度固定为 56 pt | 宽度固定为 56 pt |
+| `.estimated(56)` | 以 56 pt 估计高度，再由内容测量 | 以 56 pt 估计宽度，再由内容测量 |
+| `.uniform(estimated: 80)`（iOS 17+） | 同一行统一为最大内容高度 | 同一列统一为最大内容宽度 |
+| `.aspectRatio(1.5)` | 高度 = 列宽 ÷ 1.5 | 宽度 = 行高 × 1.5 |
+
+比例始终为 **宽 ÷ 高**，`.aspectRatio(1)` 为正方形；它不是相对于整个容器主轴的百分比。比例按每条实际轨道分别计算。混排轨道尺寸不同时，同一行/列的主轴尺寸可能不同，group 使用最大值，下一组从其后开始。estimated 和比例模式不强制同组等高/等宽；uniform 则让同组采用最大尺寸。此布局不是瀑布流。
+
+```swift
+let vertical = UIKitLazyVGridLayout(
+    columns: [UIKitGridItem(.adaptive(minimum: 120))],
+    itemSize: .estimated(80),
+    headerSize: .estimated(44),
+    footerSize: .fixed(28)
+)
+
+let horizontal = UIKitLazyHGridLayout(
+    rows: [UIKitGridItem(.fixed(80)), UIKitGridItem(.fixed(100))],
+    itemSize: .aspectRatio(1.5),
+    headerSize: .estimated(60)
+)
+```
+
+iOS 17+ 可使用同组统一策略，其他三种策略仍支持 iOS 15：
+
+| 纵向：同一行等高（增加内容） | 横向：同一列等宽 |
+| :---: | :---: |
+| <img src="Documentation/Screenshots/main-axis-uniform-vertical.jpg" alt="uniform 纵向同一行等高" width="320"> | <img src="Documentation/Screenshots/main-axis-uniform-horizontal.jpg" alt="uniform 横向同一列等宽" width="320"> |
+
+以上为 iPhone 17 Pro / iOS 26.5 的真实运行截图。
+
+```swift
+if #available(iOS 17.0, *) {
+    let vertical = UIKitLazyVGridLayout(
+        columns: [UIKitGridItem(.flexible()), UIKitGridItem(.flexible())],
+        itemSize: .uniform(estimated: 80)
+    )
+    let horizontal = UIKitLazyHGridLayout(
+        rows: [UIKitGridItem(.fixed(70)), UIKitGridItem(.fixed(90))],
+        itemSize: .uniform(estimated: 80)
+    )
+}
+```
+
+`uniform` 在 cell 上使用 UIKit 的 `uniformAcrossSiblings(estimate:)`，父 group 保持 estimated。统一范围限定在当前行/列，不扩大到整个 section；每一组独立测量，最后一组不满也独立计算。它需要测量同组所有 cell，适合每组数量较少的网格。header/footer 没有这种 cell 同组关系，因此传入 uniform 时按 estimated 独立测量。
+
+`UIKitGridSize` 是封装内部枚举的值类型，使用静态工厂方法保留 `.fixed(...)` 等点语法。`uniform(estimated:)` 单独标记 `@available(iOS 17.0, *)`；Swift 不支持给带关联值的 enum case 单独加系统可用性限制。示例在 iOS 17 以下隐藏“同组统一”，其他策略仍可选择。
+
+`.estimated` 同时设置 cell 与 group 的主轴估计值。cell 必须能通过完整的 Auto Layout 约束或 `preferredLayoutAttributesFitting(_:)` 返回实际尺寸；仅指定估计值并不会为内容自动生成约束。多行文字设置 `numberOfLines = 0`，并将内容四边约束到 `contentView`。辅助视图同样需要可测量的内容。
+
+自定义 fitting 时固定交叉轴，只测量主轴。例如在 cell 中（`isHorizontal` 由调用方设置）：
+
+```swift
+override func preferredLayoutAttributesFitting(
+    _ attributes: UICollectionViewLayoutAttributes
+) -> UICollectionViewLayoutAttributes {
+    let result = attributes.copy() as! UICollectionViewLayoutAttributes
+    let target = isHorizontal
+        ? CGSize(width: 0, height: attributes.size.height)
+        : CGSize(width: attributes.size.width, height: 0)
+    let size = contentView.systemLayoutSizeFitting(
+        target,
+        withHorizontalFittingPriority: isHorizontal ? .fittingSizeLevel : .required,
+        verticalFittingPriority: isHorizontal ? .required : .fittingSizeLevel
+    )
+    if isHorizontal {
+        result.size.width = ceil(size.width)
+    } else {
+        result.size.height = ceil(size.height)
+    }
+    return result
+}
+```
+
+内容更新后，调用方应通过 collection view 的 reload/reconfigure 等机制触发重新测量；本包不监听业务模型。比例模式会在布局环境变化时根据新的交叉轴尺寸重新计算。页眉页脚的比例使用分区可用的交叉轴尺寸，而不是某一条 cell 轨道。
+
+### 从旧 API 迁移（未发布）
+
+本次直接调整 API，不保留旧参数名重载：
+
+| 旧参数 | 新参数 |
+| --- | --- |
+| `rowHeight: 56` / `columnWidth: 56` | `itemSize: .fixed(56)` |
+| `headerHeight: 32` / `headerWidth: 32` | `headerSize: .fixed(32)` |
+| `footerHeight: 24` / `footerWidth: 24` | `footerSize: .fixed(24)` |
+| 页眉/页脚尺寸 `0` | `nil` 或省略参数 |
+
+所有固定值、估计值和比例都必须是有限正数；`.fixed(0)` 不作为隐藏辅助视图的标记。新 API 已纳入开发分支源码，尚未发布版本标签；已发布的 0.2.0 不包含这些改动。
+
 ## UIKit API
 
 ```swift
@@ -142,8 +244,8 @@ let vertical = UIKitLazyVGridLayout(
     alignment: .center,
     spacing: 12,
     pinnedViews: [.sectionHeaders],
-    rowHeight: 56,
-    headerHeight: 28
+    itemSize: .fixed(56),
+    headerSize: .fixed(28)
 )
 
 // 对应 LazyHGrid(rows:alignment:spacing:pinnedViews:content:)
@@ -155,8 +257,8 @@ let horizontal = UIKitLazyHGridLayout(
     alignment: .top,
     spacing: 12,
     pinnedViews: [.sectionHeaders],
-    columnWidth: 56,
-    headerWidth: 28
+    itemSize: .fixed(56),
+    headerSize: .fixed(28)
 )
 
 let collectionView = UICollectionView(frame: .zero, collectionViewLayout: vertical)
@@ -200,8 +302,8 @@ let layout = UIKitLazyVGridLayout(
 - 尺寸来自 `environment.container.effectiveContentSize`，不依赖设备屏幕常量。
 - 两种布局都接受 `contentInsetsReference`，默认为 `.safeArea`。容器有效尺寸已应用其 inset，builder 不再减 `safeAreaInsets`。若调用方已经安排好内容区域，可显式传 `.none`；滚动视图的 `contentInsetAdjustmentBehavior` 仍由宿主决定。两种设置分别负责布局参考边界和滚动内容的自动 inset，不要把它们当成同一开关。
 - `spacing: nil` 在包内明确为 **8 pt**。SwiftUI 的 nil 是系统默认值，不保证与这里相同。
-- UIKit 需要固定主轴尺寸：VGrid 的 `rowHeight` / HGrid 的 `columnWidth`。本版不实现 self-sizing cell。
-- header / footer 尺寸默认为 0，不创建对应 supplementary item。传入正尺寸时，数据源必须提供相应标准 element kind 的视图；`pinnedViews` 只控制吸附，不自动创建内容。
+- 两个方向统一通过 `itemSize` 配置固定尺寸、内容自适应尺寸或宽高比。
+- headerSize / footerSize 默认为 nil，不创建对应 supplementary item。传入尺寸策略时，数据源必须提供相应标准 element kind 的视图；`pinnedViews` 只控制吸附，不自动创建内容。
 - `sectionHeaders` / `sectionFooters` 可以同时使用。对比页展示 header；多分区页同时展示 header、footer 和独立吸附。
 - 支持混合轨道：先扣除 fixed 和间距，再按顺序分配其余轨道，最后展开 adaptive。不同上下限的混排与 SwiftUI 的提议尺寸、多轮测量行为不承诺逐像素一致。
 - 极窄容器下 fixed / flexible 保持固定值或 minimum，可能溢出；adaptive 的单条轨道允许缩小到容器尺寸。示例对预览边界进行裁剪。
@@ -236,3 +338,5 @@ GridItemSizeLayoutDemo/
 参考：[LazyVGrid](https://developer.apple.com/documentation/swiftui/lazyvgrid)、[LazyHGrid](https://developer.apple.com/documentation/swiftui/lazyhgrid)、[UICollectionViewCompositionalLayout](https://developer.apple.com/documentation/uikit/uicollectionviewcompositionallayout)。
 
 本次辅助视图示例验证：Xcode MCP 在 iPhone 17 Pro / iOS 26.5 运行 App 集成测试，4 项全部通过，包含五个分区的 header/footer/背景布局检查和独立页眉吸附检查；运行页面已检查页脚吸附和各分区背景。此结果不代表重新执行了完整 UI 自动化套件。
+
+2026-10-28 主轴尺寸改动验证：iPhone 17 Pro / iOS 26.5 上包测试 34/34 通过，App 集成测试 5/5 通过。新增用例验证两个公开入口、两个方向的 self-sizing 增长/缩短与 uniform 同组尺寸、末组不满及 adaptive 重新分组、辅助视图测量、比例混排、容器变化，以及实际 UILabel 内容切换。未运行完整 UI 自动化套件或 iOS 15 运行时测试。

@@ -10,8 +10,8 @@ enum CompositionalGridLayout {
                 alignment: configuration.alignment,
                 spacing: configuration.rowSpacing,
                 pinnedViews: configuration.pinHeaders ? [.sectionHeaders] : [],
-                rowHeight: GridConfiguration.rowHeight,
-                headerHeight: GridConfiguration.headerHeight
+                itemSize: .fixed(GridConfiguration.rowHeight),
+                headerSize: .fixed(GridConfiguration.headerHeight)
             )
         } else {
             return UIKitLazyHGridLayout(
@@ -19,8 +19,8 @@ enum CompositionalGridLayout {
                 alignment: configuration.verticalAlignment,
                 spacing: configuration.rowSpacing,
                 pinnedViews: configuration.pinHeaders ? [.sectionHeaders] : [],
-                columnWidth: GridConfiguration.rowHeight,
-                headerWidth: GridConfiguration.headerHeight
+                itemSize: .fixed(GridConfiguration.rowHeight),
+                headerSize: .fixed(GridConfiguration.headerHeight)
             )
         }
     }
@@ -39,22 +39,22 @@ extension CompositionalGridLayout {
             case 0:
                 section = UIKitLazyVGridLayout.makeSection(
                     columns: Array(repeating: UIKitGridItem(.fixed(72), spacing: 10), count: 3),
-                    alignment: .leading, spacing: 8, pinnedViews: style.pinnedViews, rowHeight: 48,
-                    headerHeight: style.headerHeight, footerHeight: style.footerHeight,
+                    alignment: .leading, spacing: 8, pinnedViews: style.pinnedViews, itemSize: .fixed(48),
+                    headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
                     contentInsets: insets, environment: environment
                 )
             case 1:
                 section = UIKitLazyVGridLayout.makeSection(
                     columns: Array(repeating: UIKitGridItem(.flexible(), spacing: 16), count: 2),
-                    spacing: 12, pinnedViews: style.pinnedViews, rowHeight: 64,
-                    headerHeight: style.headerHeight, footerHeight: style.footerHeight,
+                    spacing: 12, pinnedViews: style.pinnedViews, itemSize: .fixed(64),
+                    headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
                     contentInsets: insets, environment: environment
                 )
             case 2:
                 section = UIKitLazyVGridLayout.makeSection(
                     columns: [UIKitGridItem(.adaptive(minimum: 85), spacing: 8)],
-                    spacing: 8, pinnedViews: style.pinnedViews, rowHeight: 52,
-                    headerHeight: style.headerHeight, footerHeight: style.footerHeight,
+                    spacing: 8, pinnedViews: style.pinnedViews, itemSize: .fixed(52),
+                    headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
                     contentInsets: insets, environment: environment
                 )
             case 3:
@@ -62,8 +62,8 @@ extension CompositionalGridLayout {
                     columns: [UIKitGridItem(.fixed(60), spacing: 12),
                               UIKitGridItem(.flexible(minimum: 70, maximum: 100), spacing: 12),
                               UIKitGridItem(.adaptive(minimum: 55), spacing: 12)],
-                    alignment: .trailing, spacing: 10, pinnedViews: style.pinnedViews, rowHeight: 60,
-                    headerHeight: style.headerHeight, footerHeight: style.footerHeight,
+                    alignment: .trailing, spacing: 10, pinnedViews: style.pinnedViews, itemSize: .fixed(60),
+                    headerSize: .fixed(style.headerHeight), footerSize: .fixed(style.footerHeight),
                     contentInsets: insets, environment: environment
                 )
             default:
