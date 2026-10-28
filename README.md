@@ -2,7 +2,7 @@
 
 使用同一组参数，对比 SwiftUI `LazyVGrid` / `LazyHGrid` 和 UIKit compositional layout。
 
-布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。开发分支新增统一的主轴尺寸 API（固定、内容自适应、同组统一、宽高比），尚未发布；0.2.0 的调用方需要按下文迁移。
+布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。示例的 submodule 固定到 [UIKitGridLayouts 0.3.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.3.0) 标签对应提交，包含固定、内容自适应、同组统一和宽高比四种主轴尺寸策略；0.2.x 的调用方需要按下文迁移。
 
 ## 运行截图
 
@@ -219,7 +219,7 @@ override func preferredLayoutAttributesFitting(
 
 内容更新后，调用方应通过 collection view 的 reload/reconfigure 等机制触发重新测量；本包不监听业务模型。比例模式会在布局环境变化时根据新的交叉轴尺寸重新计算。页眉页脚的比例使用分区可用的交叉轴尺寸，而不是某一条 cell 轨道。
 
-### 从旧 API 迁移（未发布）
+### 从 0.2.x 迁移到 0.3.0
 
 本次直接调整 API，不保留旧参数名重载：
 
@@ -230,7 +230,7 @@ override func preferredLayoutAttributesFitting(
 | `footerHeight: 24` / `footerWidth: 24` | `footerSize: .fixed(24)` |
 | 页眉/页脚尺寸 `0` | `nil` 或省略参数 |
 
-所有固定值、估计值和比例都必须是有限正数；`.fixed(0)` 不作为隐藏辅助视图的标记。新 API 已纳入开发分支源码，尚未发布版本标签；已发布的 0.2.0 不包含这些改动。
+所有固定值、估计值和比例都必须是有限正数；`.fixed(0)` 不作为隐藏辅助视图的标记。这些 API 从 0.3.0 起提供；0.2.x 使用旧参数名。
 
 ## UIKit API
 
