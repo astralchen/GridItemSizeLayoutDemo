@@ -2,7 +2,7 @@
 
 使用同一组参数，对比 SwiftUI `LazyVGrid` / `LazyHGrid` 和 UIKit compositional layout。
 
-布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。示例的 submodule 固定到 [UIKitGridLayouts 0.3.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.3.0) 标签对应提交，包含固定、内容自适应、同组统一和宽高比四种主轴尺寸策略；0.2.x 的调用方需要按下文迁移。
+布局库位于独立仓库 [UIKitGridLayouts](https://github.com/astralchen/UIKitGridLayouts)，通过 `Packages/UIKitGridLayouts` submodule 和本地 Swift Package 路径引用。示例使用 [UIKitGridLayouts 0.3.0](https://github.com/astralchen/UIKitGridLayouts/releases/tag/0.3.0) 的布局 API，submodule 固定到后续仅新增 `AGENTS.md` 协作规范的提交 [`59d9a14`](https://github.com/astralchen/UIKitGridLayouts/commit/59d9a14)，库源码与 0.3.0 一致。包含固定、内容自适应、同组统一和宽高比四种主轴尺寸策略；0.2.x 的调用方需要按下文迁移。
 
 ## 运行截图
 
